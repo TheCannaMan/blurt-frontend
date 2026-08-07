@@ -377,28 +377,28 @@
   function isConfigured(){ return !!(settings.backendUrl && settings.zip); }
 
   function saveList(){
-    try{ window.storage.set(LIST_KEY, JSON.stringify(items), false).catch(function(){}); }catch(e){}
+    try{ localStorage.setItem(LIST_KEY, JSON.stringify(items)); }catch(e){}
   }
   function saveSettings(){
-    try{ window.storage.set(SETTINGS_KEY, JSON.stringify(settings), false).catch(function(){}); }catch(e){}
+    try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
   }
   function loadAll(){
     try{
-      window.storage.get(LIST_KEY, false).then(function(res){
-        if(res && res.value){ try{ items = JSON.parse(res.value); }catch(e){ items = []; } }
-        render();
-      }).catch(function(){ render(); });
-    }catch(e){ render(); }
-    try{
-      window.storage.get(SETTINGS_KEY, false).then(function(res){
-        if(res && res.value){
-          try{ settings = Object.assign(settings, JSON.parse(res.value)); }catch(e){}
-        }
-        document.getElementById('backendUrl').value = settings.backendUrl || '';
-        document.getElementById('zipInput').value = settings.zip || '';
-        updateStatusPill(isConfigured());
-      }).catch(function(){});
+      var raw = localStorage.getItem(LIST_KEY);
+      if(raw){ try{ items = JSON.parse(raw); }catch(e){ items = []; } }
     }catch(e){}
+    try{
+      var rawSettings = localStorage.getItem(SETTINGS_KEY);
+      if(rawSettings){
+        try{ settings = Object.assign(settings, JSON.parse(rawSettings)); }catch(e){}
+      }
+    }catch(e){}
+    // Always populate the fields, whether from saved settings or the built-in defaults —
+    // this way the input never sits empty showing only placeholder text.
+    document.getElementById('backendUrl').value = settings.backendUrl || '';
+    document.getElementById('zipInput').value = settings.zip || '';
+    updateStatusPill(isConfigured());
+    render();
   }
 
   function updateStatusPill(connected){
@@ -829,7 +829,6 @@
   });
 
   loadAll();
-  render();
 })();
 </script>
 </body>
