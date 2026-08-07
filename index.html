@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blurt — say it before you forget it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14171C;
+    --ink-soft:#2A2E35;
+    --paper:#F6F5EC;
+    --paper-dim:#EDEBDD;
+    --pink:#FF4D6D;
+    --pink-deep:#E23856;
+    --green:#1F7A4D;
+    --gold:#F4C430;
+    --line:#D8D4C4;
+    --muted:#8A8674;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(255,77,109,0.07), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(244,196,48,0.06), transparent 45%);
+    min-height:100vh;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:28px 14px 60px;
+  }
+  .app{ width:100%; max-width:440px; }
+  .receipt{
+    background:var(--paper);
+    border-radius:6px 6px 0 0;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.04);
+    overflow:hidden;
+  }
+  .torn-edge{
+    width:100%; height:16px;
+    background-image:
+      linear-gradient(135deg, var(--paper) 50%, transparent 50.5%),
+      linear-gradient(45deg, var(--paper) 50%, transparent 50.5%);
+    background-size:16px 16px;
+    background-position:0 0, 8px 0;
+    background-repeat:repeat-x;
+  }
+
+  header{ padding:26px 26px 18px; border-bottom:1px dashed var(--line); }
+  .top-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .wordmark{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:28px;
+    letter-spacing:0.5px; line-height:1; display:flex; align-items:center; gap:8px;
+  }
+  .wordmark .dot{
+    width:9px;height:9px;border-radius:50%; background:var(--pink);
+    display:inline-block; box-shadow:0 0 0 3px rgba(255,77,109,0.18);
+  }
+  .tagline{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--muted); margin-top:4px;
+  }
+  .top-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+  .count-chip{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--ink);
+    color:var(--paper); padding:5px 10px; border-radius:20px; white-space:nowrap;
+  }
+  .settings-btn{
+    background:none; border:1px solid var(--line); cursor:pointer;
+    color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    padding:4px 9px; border-radius:14px; display:flex; align-items:center; gap:5px;
+  }
+  .settings-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
+  .settings-btn svg{ width:11px; height:11px; }
+  .status-pill{
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; padding:3px 8px;
+    border-radius:10px; display:inline-flex; align-items:center; gap:4px; margin-top:2px;
+  }
+  .status-pill.ok{ background:rgba(31,122,77,0.12); color:var(--green); }
+  .status-pill.off{ background:rgba(138,134,116,0.15); color:var(--muted); }
+  .status-pill .led{ width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .settings-panel{
+    display:none; margin-top:14px; background:var(--paper-dim);
+    border:1px dashed var(--line); border-radius:10px; padding:14px 16px;
+  }
+  .settings-panel.open{ display:block; }
+  .settings-panel p{ margin:0 0 10px; font-size:12px; line-height:1.55; color:var(--ink-soft); }
+  .settings-field{ margin-bottom:10px; }
+  .settings-field label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-bottom:4px;
+  }
+  .settings-field input{
+    width:100%; padding:8px 10px; border-radius:7px; border:1px solid var(--line);
+    background:#fff; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink);
+  }
+  .settings-field input:focus{ outline:2px solid var(--pink); outline-offset:1px; }
+  .settings-row{ display:flex; gap:8px; margin-top:10px; }
+  .settings-row button{ flex:1; border:none; border-radius:7px; padding:9px 0; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .btn-save{ background:var(--ink); color:var(--paper); }
+  .btn-test{ background:#fff; color:var(--ink); border:1px solid var(--line) !important; }
+  .settings-msg{ margin-top:8px; font-size:11.5px; line-height:1.5; }
+  .settings-msg.ok{ color:var(--green); }
+  .settings-msg.err{ color:var(--pink-deep); }
+  .info-btn{
+    background:none; border:none; cursor:pointer; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-decoration:underline;
+    text-underline-offset:2px; padding:0; margin-top:10px; text-align:left;
+  }
+  .info-btn:hover{ color:var(--ink); }
+  .info-panel{
+    display:none; margin-top:10px; font-size:12px; line-height:1.55; color:var(--ink-soft);
+    background:var(--paper-dim); border:1px dashed var(--line); border-radius:8px; padding:12px 14px;
+  }
+  .info-panel.open{ display:block; }
+
+  .mic-zone{
+    padding:34px 26px 22px; display:flex; flex-direction:column; align-items:center;
+    border-bottom:1px dashed var(--line); text-align:center;
+  }
+  .mic-btn{
+    position:relative; width:96px; height:96px; border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(160deg, var(--pink), var(--pink-deep));
+    box-shadow:0 14px 26px -10px rgba(255,77,109,0.55), inset 0 -3px 6px rgba(0,0,0,0.18);
+    display:flex; align-items:center; justify-content:center; transition:transform 0.15s ease;
+  }
+  .mic-btn:active{ transform:scale(0.94); }
+  .mic-btn:focus-visible{ outline:3px solid var(--gold); outline-offset:4px; }
+  .mic-btn svg{ width:34px; height:34px; color:var(--paper); }
+  .ring{ position:absolute; inset:0; border-radius:50%; border:2px solid var(--pink); opacity:0; }
+  .mic-btn.listening .ring{ animation:pulse 1.6s ease-out infinite; }
+  .mic-btn.listening .ring.r2{ animation-delay:0.5s; }
+  @keyframes pulse{ 0%{transform:scale(1); opacity:0.55;} 100%{transform:scale(1.9); opacity:0;} }
+  .mic-btn.listening{ background:linear-gradient(160deg, var(--pink-deep), #C21E3D); }
+  .mic-hint{ font-size:14px; margin-top:16px; color:var(--ink-soft); max-width:270px; line-height:1.5; }
+  .mic-hint strong{ color:var(--ink); }
+  .live-transcript{ margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--pink-deep); min-height:16px; }
+  .manual-toggle{ margin-top:16px; background:none; border:none; font-size:12px; color:var(--muted); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+  .manual-toggle:hover{ color:var(--ink); }
+  .manual-row{ display:none; margin-top:14px; width:100%; max-width:320px; gap:8px; }
+  .manual-row.open{ display:flex; }
+  .manual-row input{
+    flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink);
+  }
+  .manual-row input:focus{ outline:2px solid var(--pink); outline-offset:1px; }
+  .manual-row button{ background:var(--ink); color:var(--paper); border:none; border-radius:8px; padding:0 16px; font-size:13px; font-weight:600; cursor:pointer; }
+  .support-warning{ margin-top:12px; font-size:11.5px; color:var(--muted); max-width:280px; line-height:1.5; }
+
+  .list-header{ padding:18px 26px 4px; display:flex; justify-content:space-between; align-items:center; }
+  .list-header h2{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin:0; font-weight:600; }
+  .clear-btn{ background:none; border:none; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer; }
+  .clear-btn:hover{ color:var(--pink-deep); }
+
+  .total-bar{
+    margin:10px 26px 4px; padding:12px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
+    display:flex; align-items:baseline; justify-content:space-between;
+  }
+  .total-label{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:600; }
+  .total-sub{ font-size:10.5px; color:var(--muted); display:block; margin-top:2px; text-transform:none; letter-spacing:0; font-weight:500; }
+  .total-value{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; color:var(--green); }
+
+  .list{ padding:10px 26px 26px; }
+  .empty-state{ text-align:center; padding:30px 10px 16px; color:var(--muted); }
+  .empty-state svg{ width:36px; height:36px; opacity:0.35; margin-bottom:10px; }
+  .empty-state p{ font-size:13px; line-height:1.6; margin:0; }
+
+  /* Unified item card */
+  .item-card{ padding:14px 0; border-bottom:1px dashed var(--line); }
+  .item-card:last-child{ border-bottom:none; }
+  .item-card-head{ display:flex; align-items:center; gap:10px; }
+  .pick-btn{
+    width:20px;height:20px; border-radius:50%; border:1.5px solid var(--line); background:#fff;
+    cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .pick-btn svg{ width:11px; height:11px; opacity:0; color:var(--paper); }
+  .item-card.picked .pick-btn{ background:var(--green); border-color:var(--green); }
+  .item-card.picked .pick-btn svg{ opacity:1; }
+  .item-card.picked .item-query{ text-decoration:line-through; color:var(--muted); }
+  .pick-btn-spacer{ width:20px; flex-shrink:0; }
+  .item-query{ flex:1; font-size:14.5px; font-weight:600; }
+  .remove-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
+  .remove-btn:hover{ color:var(--pink-deep); }
+
+  .item-body{ margin-top:8px; padding-left:30px; }
+
+  .search-status{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .spinner{ width:9px; height:9px; border-radius:50%; border:1.5px solid var(--line); border-top-color:var(--pink); animation:spin 0.8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .search-error{ font-size:12px; color:var(--pink-deep); background:rgba(255,77,109,0.08); border-radius:7px; padding:9px 11px; line-height:1.5; max-width:320px; }
+  .retry-btn{ margin-top:6px; background:none; border:1px dashed var(--line); border-radius:12px; font-size:11px; padding:4px 10px; cursor:pointer; color:var(--ink-soft); }
+  .retry-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
+  .setup-needed{ font-size:12px; color:var(--muted); background:var(--paper-dim); border:1px dashed var(--line); border-radius:8px; padding:9px 11px; line-height:1.5; max-width:320px; }
+  .setup-needed button{ margin-top:6px; background:none; border:none; color:var(--pink-deep); text-decoration:underline; cursor:pointer; font-size:11.5px; padding:0; display:block; }
+
+  .options-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .store-line{ font-size:10.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
+  .sort-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; background:#fff; border:1px solid var(--line);
+    border-radius:12px; padding:3px 9px; cursor:pointer; color:var(--ink-soft); display:flex; align-items:center; gap:4px;
+  }
+  .sort-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
+  .sort-btn svg{ width:10px; height:10px; }
+
+  .option-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:8px 9px; border-radius:8px; margin-bottom:6px; background:#fff; border:1px solid var(--line);
+  }
+  .option-row.selected{ border-color:var(--green); background:rgba(31,122,77,0.06); }
+  .option-thumb{
+    width:40px; height:40px; border-radius:7px; object-fit:cover; flex-shrink:0;
+    background:var(--paper-dim); border:1px solid var(--line);
+  }
+  .option-thumb.placeholder{ display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  .option-thumb.placeholder svg{ width:16px; height:16px; }
+  .option-info{ flex:1; min-width:0; }
+  .option-desc{ font-size:12.5px; color:var(--ink); line-height:1.4; }
+  .option-desc small{ display:block; color:var(--muted); font-size:10.5px; margin-top:1px; }
+  .option-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; white-space:nowrap; }
+  .option-price .was{ color:var(--muted); text-decoration:line-through; font-weight:500; font-size:10.5px; margin-left:4px; }
+  .option-price.cheapest{ color:var(--green); }
+  .select-btn{
+    background:var(--ink); color:var(--paper); border:none; border-radius:14px;
+    font-size:11px; padding:6px 12px; cursor:pointer; white-space:nowrap; font-weight:600;
+  }
+  .select-btn:hover{ background:var(--pink-deep); }
+  .select-btn.is-selected{ background:var(--green); }
+
+  /* Collapsed / resolved view */
+  .chosen-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .chosen-info{ flex:1; min-width:0; }
+  .chosen-row{ align-items:flex-start; }
+  .chosen-thumb{
+    width:44px; height:44px; border-radius:7px; object-fit:cover; flex-shrink:0;
+    background:var(--paper-dim); border:1px solid var(--line);
+  }
+  .chosen-thumb.placeholder{ display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  .chosen-thumb.placeholder svg{ width:18px; height:18px; }
+  .chosen-top{ display:flex; gap:10px; }
+  .chosen-desc{ font-size:13px; color:var(--ink-soft); line-height:1.4; }
+  .chosen-desc small{ display:block; color:var(--muted); font-size:10.5px; margin-top:1px; }
+  .chosen-meta{ display:flex; align-items:center; justify-content:space-between; margin-top:7px; gap:10px; flex-wrap:wrap; }
+  .qty-stepper{ display:flex; align-items:center; gap:8px; }
+  .qty-btn{
+    width:22px; height:22px; border-radius:50%; border:1px solid var(--line); background:#fff;
+    cursor:pointer; font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+  }
+  .qty-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
+  .qty-num{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; min-width:14px; text-align:center; }
+  .line-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13.5px; }
+  .change-link{ background:none; border:none; color:var(--muted); font-size:11px; text-decoration:underline; cursor:pointer; padding:0; margin-top:6px; }
+  .change-link:hover{ color:var(--pink-deep); }
+
+  .insight-btn{
+    margin-top:8px; background:none; border:1px dashed var(--line); color:var(--ink-soft); font-size:11px;
+    padding:5px 10px; border-radius:14px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+  }
+  .insight-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
+  .insight-btn svg{ width:11px; height:11px; }
+  .insight-text{ margin-top:8px; font-size:12px; line-height:1.55; color:var(--ink-soft); background:var(--paper-dim); border-radius:8px; padding:9px 11px; }
+
+  footer{ text-align:center; padding:16px 10px 0; font-size:10.5px; color:rgba(246,245,236,0.35); font-family:'IBM Plex Mono',monospace; }
+
+  @media (prefers-reduced-motion: reduce){ .ring, .spinner{ animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="receipt">
+    <header>
+      <div class="top-row">
+        <div>
+          <div class="wordmark"><span class="dot"></span>Blurt</div>
+          <div class="tagline">say it. price it. save it.</div>
+        </div>
+        <div class="top-actions">
+          <div class="count-chip" id="countChip">0 in list</div>
+          <button class="settings-btn" id="settingsToggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            setup
+          </button>
+          <span class="status-pill off" id="statusPill"><span class="led"></span>not connected</span>
+        </div>
+      </div>
+
+      <div class="settings-panel" id="settingsPanel">
+        <p>Blurt needs a small local backend running to fetch real prices from your nearest Kroger-family store (a browser can't call Kroger directly — see the "how this works" note below). Point Blurt at that backend and your ZIP code here.</p>
+        <div class="settings-field">
+          <label for="backendUrl">Backend URL</label>
+          <input type="text" id="backendUrl" placeholder="http://localhost:5000">
+        </div>
+        <div class="settings-field">
+          <label for="zipInput">ZIP code</label>
+          <input type="text" id="zipInput" placeholder="98004" maxlength="10">
+        </div>
+        <div class="settings-row">
+          <button class="btn-test" id="btnTest">Test connection</button>
+          <button class="btn-save" id="btnSave">Save</button>
+        </div>
+        <div class="settings-msg" id="settingsMsg"></div>
+      </div>
+
+      <button class="info-btn" id="infoToggle">how this works ⓘ</button>
+      <div class="info-panel" id="infoPanel">
+        Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, etc.) — live from Kroger's product API through your own local backend. Pick a price and it collapses down to your choice; tap "change" anytime to pick something else. Nothing here is a real cart — it is a running estimate so you know what you are about to spend. Walmart and Target are not connected yet — neither has a free public pricing API. "Ask for a tip" gives a general savings note from Claude, not live pricing.
+      </div>
+    </header>
+
+    <div class="mic-zone">
+      <button class="mic-btn" id="micBtn" aria-label="Tap to speak">
+        <span class="ring"></span>
+        <span class="ring r2"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <div class="mic-hint" id="micHint"><strong>Tap and say</strong> what you're shopping for — Blurt will pull up real prices to choose from.</div>
+      <div class="live-transcript" id="liveTranscript"></div>
+      <button class="manual-toggle" id="manualToggle">or type it instead</button>
+      <div class="manual-row" id="manualRow">
+        <input type="text" id="manualInput" placeholder="e.g. dish soap" maxlength="60">
+        <button id="manualAdd">Add</button>
+      </div>
+      <div class="support-warning" id="supportWarning" style="display:none;"></div>
+    </div>
+
+    <div class="list-header">
+      <h2>Your list</h2>
+      <button class="clear-btn" id="clearPicked">clear picked up</button>
+    </div>
+    <div class="total-bar">
+      <div>
+        <div class="total-label">Estimated total</div>
+        <span class="total-sub" id="totalSub">0 items</span>
+      </div>
+      <div class="total-value" id="totalValue">$0.00</div>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="torn-edge"></div>
+  </div>
+  <footer>tap the mic before it slips your mind</footer>
+</div>
+
+<script>
+(function(){
+  const LIST_KEY = 'blurt:items';
+  const SETTINGS_KEY = 'blurt:settings';
+
+  // Each item: {
+  //   id, query, status: 'needs-setup'|'loading'|'error'|'choosing'|'resolved',
+  //   results, sortOrder, storeInfo, errorMsg,
+  //   selectedProductId, qty, expanded, picked, insight, insightLoading
+  // }
+  var items = [];
+  var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '' };
+
+  function fmt(n){ return '$' + Number(n).toFixed(2); }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function parseSpeech(text){
+    var t = text.trim();
+    t = t.replace(/^(i need to buy|i need to get|i need|we need to buy|we need|add|buy|get me a|get me|get a|get|pick up a|pick up|grab a|grab|search for|find)\s+/i, '');
+    t = t.replace(/\s+(please|to the list|to my list)\.?$/i, '');
+    t = t.replace(/\.$/, '');
+    t = t.trim();
+    if(!t) return null;
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  function isConfigured(){ return !!(settings.backendUrl && settings.zip); }
+
+  function saveList(){
+    try{ window.storage.set(LIST_KEY, JSON.stringify(items), false).catch(function(){}); }catch(e){}
+  }
+  function saveSettings(){
+    try{ window.storage.set(SETTINGS_KEY, JSON.stringify(settings), false).catch(function(){}); }catch(e){}
+  }
+  function loadAll(){
+    try{
+      window.storage.get(LIST_KEY, false).then(function(res){
+        if(res && res.value){ try{ items = JSON.parse(res.value); }catch(e){ items = []; } }
+        render();
+      }).catch(function(){ render(); });
+    }catch(e){ render(); }
+    try{
+      window.storage.get(SETTINGS_KEY, false).then(function(res){
+        if(res && res.value){
+          try{ settings = Object.assign(settings, JSON.parse(res.value)); }catch(e){}
+        }
+        document.getElementById('backendUrl').value = settings.backendUrl || '';
+        document.getElementById('zipInput').value = settings.zip || '';
+        updateStatusPill(isConfigured());
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  function updateStatusPill(connected){
+    var pill = document.getElementById('statusPill');
+    if(connected){
+      pill.className = 'status-pill ok';
+      pill.innerHTML = '<span class="led"></span>Kroger store connected';
+    } else {
+      pill.className = 'status-pill off';
+      pill.innerHTML = '<span class="led"></span>not connected';
+    }
+  }
+
+  // ---------- Adding a new checklist item ----------
+  function addItem(rawText){
+    var q = parseSpeech(rawText);
+    if(!q) return;
+    var item = {
+      id: 'i'+Date.now()+Math.random().toString(36).slice(2,7),
+      query: q,
+      status: isConfigured() ? 'loading' : 'needs-setup',
+      results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null,
+      selectedProductId: null, qty: 1, expanded: true, picked: false,
+      insight: null, insightLoading: false
+    };
+    items.unshift(item);
+    render(); saveList();
+    if(item.status === 'loading') fetchOptions(item.id);
+  }
+
+  function fetchOptions(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(!it) return;
+    it.status = 'loading'; it.errorMsg = null;
+    render();
+    var url = settings.backendUrl.replace(/\/$/, '') + '/api/compare?item=' + encodeURIComponent(it.query) + '&zip=' + encodeURIComponent(settings.zip);
+    fetch(url).then(function(resp){
+      if(!resp.ok){
+        return resp.json().catch(function(){ return {}; }).then(function(body){
+          throw new Error(body.error || ('Backend responded with ' + resp.status));
+        });
+      }
+      return resp.json();
+    }).then(function(data){
+      it.results = data.results || [];
+      it.storeInfo = data.store || null;
+      it.status = 'choosing';
+      it.expanded = true;
+      render(); saveList();
+    }).catch(function(err){
+      it.status = 'error';
+      it.errorMsg = err.message || 'Could not reach the backend.';
+      render(); saveList();
+    });
+  }
+
+  function sortedOptions(it){
+    if(!it.results) return [];
+    var copy = it.results.slice();
+    copy.sort(function(a,b){
+      var pa = a.promoPrice || a.regularPrice, pb = b.promoPrice || b.regularPrice;
+      return it.sortOrder === 'asc' ? pa - pb : pb - pa;
+    });
+    return copy;
+  }
+
+  function selectOption(id, productId){
+    var it = items.find(function(i){ return i.id === id; });
+    if(!it || !it.results) return;
+    var product = it.results.find(function(p){ return p.productId === productId; });
+    if(!product) return;
+    it.selectedProductId = productId;
+    it.status = 'resolved';
+    it.expanded = false;
+    if(!it.qty) it.qty = 1;
+    render(); saveList();
+  }
+
+  function toggleExpanded(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(it){ it.expanded = !it.expanded; render(); }
+  }
+
+  function toggleSort(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(it){ it.sortOrder = it.sortOrder === 'asc' ? 'desc' : 'asc'; render(); }
+  }
+
+  function changeQty(id, delta){
+    var it = items.find(function(i){ return i.id === id; });
+    if(!it) return;
+    it.qty = Math.max(1, (it.qty || 1) + delta);
+    saveList(); render();
+  }
+  function removeItem(id){
+    items = items.filter(function(i){ return i.id !== id; });
+    saveList(); render();
+  }
+  function togglePicked(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(it){ it.picked = !it.picked; saveList(); render(); }
+  }
+  function clearPicked(){
+    items = items.filter(function(i){ return !i.picked; });
+    saveList(); render();
+  }
+
+  function askInsight(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(!it || it.insightLoading || it.insight) { render(); return; }
+    it.insightLoading = true; render();
+    fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 120,
+        messages: [
+          { role: "user", content: "In one short, friendly sentence (under 25 words, no markdown), give a general money-saving tip for buying \"" + it.query + "\" -- e.g. store-brand swaps, bulk sizing, or which type of retailer tends to run cheaper for this category. Do not claim to know today's real prices." }
+        ]
+      })
+    }).then(function(response){ return response.json(); }).then(function(data){
+      var textBlock = (data.content || []).find(function(b){ return b.type === 'text'; });
+      it.insight = textBlock ? textBlock.text.trim() : "No tip available right now.";
+    }).catch(function(){
+      it.insight = "Could not reach the tip generator right now.";
+    }).finally(function(){
+      it.insightLoading = false;
+      render();
+    });
+  }
+
+  function iconCheck(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'; }
+  function iconSpark(){ return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 5.8L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.2z"/></svg>'; }
+  function iconSort(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>'; }
+  function iconBag(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>'; }
+
+  function thumbHtml(imageUrl, sizeClass){
+    if(imageUrl){
+      return '<img class="' + sizeClass + '" src="' + escapeHtml(imageUrl) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;' + sizeClass + ' placeholder&quot;>' + iconBag().replace(/"/g,'&quot;') + '</div>\'">';
+    }
+    return '<div class="' + sizeClass + ' placeholder">' + iconBag() + '</div>';
+  }
+
+  function selectedProduct(it){
+    if(!it.results || !it.selectedProductId) return null;
+    return it.results.find(function(p){ return p.productId === it.selectedProductId; }) || null;
+  }
+
+  function optionsBlockHtml(it){
+    var options = sortedOptions(it);
+    var storeName = (it.storeInfo && it.storeInfo.name) || 'your store';
+    var html = '<div class="options-head">' +
+        '<span class="store-line">' + escapeHtml(storeName) + '</span>' +
+        '<button class="sort-btn" data-sort="' + it.id + '">' + iconSort() + (it.sortOrder === 'asc' ? 'low first' : 'high first') + '</button>' +
+      '</div>';
+    if(options.length === 0){
+      html += '<div class="search-status">No matching products found for this search.</div>';
+      return html;
+    }
+    var cheapest = options[0].promoPrice || options[0].regularPrice;
+    html += options.map(function(p){
+      var price = p.promoPrice || p.regularPrice;
+      var wasHtml = p.promoPrice ? '<span class="was">' + fmt(p.regularPrice) + '</span>' : '';
+      var isSelected = it.selectedProductId === p.productId;
+      var descLine = (p.brand ? escapeHtml(p.brand) + ' — ' : '') + escapeHtml(p.description);
+      return '<div class="option-row' + (isSelected ? ' selected' : '') + '">' +
+        thumbHtml(p.imageUrl, 'option-thumb') +
+        '<div class="option-info"><div class="option-desc">' + descLine +
+          (p.size ? '<small>' + escapeHtml(p.size) + '</small>' : '') + '</div></div>' +
+        '<div class="option-price' + (price === cheapest ? ' cheapest' : '') + '">' + fmt(price) + wasHtml + '</div>' +
+        '<button class="select-btn' + (isSelected ? ' is-selected' : '') + '" data-select="' + it.id + '|' + p.productId + '">' + (isSelected ? 'Selected ✓' : 'Select') + '</button>' +
+      '</div>';
+    }).join('');
+    return html;
+  }
+
+  function itemBodyHtml(it){
+    if(it.status === 'needs-setup'){
+      return '<div class="setup-needed">Connect Blurt to your backend and ZIP code to see prices for "' + escapeHtml(it.query) + '".' +
+        '<button data-open-settings="' + it.id + '">Open setup →</button></div>';
+    }
+    if(it.status === 'loading'){
+      return '<div class="search-status"><span class="spinner"></span> checking your nearest Kroger store…</div>';
+    }
+    if(it.status === 'error'){
+      return '<div class="search-error">Could not fetch prices: ' + escapeHtml(it.errorMsg) + '</div>' +
+        '<button class="retry-btn" data-retry="' + it.id + '">try again</button>';
+    }
+    if(it.status === 'choosing' || (it.status === 'resolved' && it.expanded)){
+      return optionsBlockHtml(it);
+    }
+    // resolved and collapsed
+    var product = selectedProduct(it);
+    if(!product) return '<div class="search-status">Selection not found — tap change to pick again.</div>';
+    var lineTotal = (product.promoPrice || product.regularPrice) * it.qty;
+    var descLine = (product.brand ? escapeHtml(product.brand) + ' — ' : '') + escapeHtml(product.description);
+    return '<div class="chosen-row">' +
+        thumbHtml(product.imageUrl, 'chosen-thumb') +
+        '<div class="chosen-info">' +
+        '<div class="chosen-desc">' + descLine + (product.size ? '<small>' + escapeHtml(product.size) + '</small>' : '') + '</div>' +
+        '<div class="chosen-meta">' +
+          '<div class="qty-stepper">' +
+            '<button class="qty-btn" data-qty-minus="' + it.id + '">−</button>' +
+            '<span class="qty-num">' + it.qty + '</span>' +
+            '<button class="qty-btn" data-qty-plus="' + it.id + '">+</button>' +
+          '</div>' +
+          '<div class="line-price">' + fmt(lineTotal) + '</div>' +
+        '</div>' +
+        '<button class="change-link" data-toggle-expand="' + it.id + '">change option</button>' +
+      '</div></div>';
+  }
+
+  function render(){
+    var listEl = document.getElementById('list');
+    var countChip = document.getElementById('countChip');
+    var totalValue = document.getElementById('totalValue');
+    var totalSub = document.getElementById('totalSub');
+
+    var resolvedItems = items.filter(function(i){ return i.status === 'resolved'; });
+    var totalItems = resolvedItems.reduce(function(sum,i){ return sum + i.qty; }, 0);
+    var totalPrice = resolvedItems.reduce(function(sum,i){
+      var p = selectedProduct(i);
+      var price = p ? (p.promoPrice || p.regularPrice) : 0;
+      return sum + price * i.qty;
+    }, 0);
+    var pickedCount = resolvedItems.filter(function(i){ return i.picked; }).length;
+    var pendingCount = items.length - resolvedItems.length;
+
+    countChip.textContent = totalItems + (totalItems===1?' item':' items');
+    totalValue.textContent = fmt(totalPrice);
+    var subParts = [totalItems + (totalItems===1?' item':' items')];
+    if(pickedCount) subParts.push(pickedCount + ' picked up');
+    if(pendingCount) subParts.push(pendingCount + ' still choosing');
+    totalSub.textContent = subParts.join(' · ');
+
+    if(items.length === 0){
+      listEl.innerHTML = '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>' +
+        '<p>Nothing on your list yet.<br>Tap the mic and blurt something out.</p></div>';
+      return;
+    }
+
+    listEl.innerHTML = items.map(function(it){
+      var canPick = it.status === 'resolved';
+      var headActions = canPick
+        ? '<button class="pick-btn" data-pick="' + it.id + '">' + iconCheck() + '</button>'
+        : '<span class="pick-btn-spacer"></span>';
+
+      var insightHtml = '';
+      var showInsight = it.status === 'resolved' && !it.expanded;
+      if(showInsight){
+        if(it.insightLoading){
+          insightHtml = '<div class="insight-text">thinking…</div>';
+        } else if(it.insight){
+          insightHtml = '<div class="insight-text">' + escapeHtml(it.insight) + '</div>';
+        } else {
+          insightHtml = '<button class="insight-btn" data-insight="' + it.id + '">' + iconSpark() + ' ask for a tip</button>';
+        }
+      }
+
+      return '<div class="item-card' + (it.picked ? ' picked' : '') + '">' +
+        '<div class="item-card-head">' +
+          headActions +
+          '<span class="item-query">' + escapeHtml(it.query) + '</span>' +
+          '<button class="remove-btn" data-remove="' + it.id + '">×</button>' +
+        '</div>' +
+        '<div class="item-body">' + itemBodyHtml(it) + insightHtml + '</div>' +
+      '</div>';
+    }).join('');
+
+    listEl.querySelectorAll('[data-pick]').forEach(function(btn){ btn.addEventListener('click', function(){ togglePicked(btn.getAttribute('data-pick')); }); });
+    listEl.querySelectorAll('[data-remove]').forEach(function(btn){ btn.addEventListener('click', function(){ removeItem(btn.getAttribute('data-remove')); }); });
+    listEl.querySelectorAll('[data-retry]').forEach(function(btn){ btn.addEventListener('click', function(){ fetchOptions(btn.getAttribute('data-retry')); }); });
+    listEl.querySelectorAll('[data-sort]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleSort(btn.getAttribute('data-sort')); }); });
+    listEl.querySelectorAll('[data-toggle-expand]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleExpanded(btn.getAttribute('data-toggle-expand')); }); });
+    listEl.querySelectorAll('[data-qty-minus]').forEach(function(btn){ btn.addEventListener('click', function(){ changeQty(btn.getAttribute('data-qty-minus'), -1); }); });
+    listEl.querySelectorAll('[data-qty-plus]').forEach(function(btn){ btn.addEventListener('click', function(){ changeQty(btn.getAttribute('data-qty-plus'), 1); }); });
+    listEl.querySelectorAll('[data-insight]').forEach(function(btn){ btn.addEventListener('click', function(){ askInsight(btn.getAttribute('data-insight')); }); });
+    listEl.querySelectorAll('[data-open-settings]').forEach(function(btn){ btn.addEventListener('click', function(){
+      document.getElementById('settingsPanel').classList.add('open');
+      document.getElementById('backendUrl').focus();
+    }); });
+    listEl.querySelectorAll('[data-select]').forEach(function(btn){ btn.addEventListener('click', function(){
+      var parts = btn.getAttribute('data-select').split('|');
+      selectOption(parts[0], parts[1]);
+    }); });
+  }
+
+  document.getElementById('clearPicked').addEventListener('click', clearPicked);
+
+  // Info panel
+  document.getElementById('infoToggle').addEventListener('click', function(){
+    document.getElementById('infoPanel').classList.toggle('open');
+  });
+
+  // Settings panel
+  var settingsPanel = document.getElementById('settingsPanel');
+  document.getElementById('settingsToggle').addEventListener('click', function(){ settingsPanel.classList.toggle('open'); });
+
+  document.getElementById('btnSave').addEventListener('click', function(){
+    settings.backendUrl = document.getElementById('backendUrl').value.trim() || 'http://localhost:5000';
+    settings.zip = document.getElementById('zipInput').value.trim();
+    saveSettings();
+    updateStatusPill(isConfigured());
+    var msg = document.getElementById('settingsMsg');
+    msg.className = 'settings-msg ok';
+    msg.textContent = 'Saved.';
+    items.filter(function(i){ return i.status === 'needs-setup'; }).forEach(function(i){
+      if(isConfigured()){ i.status = 'loading'; fetchOptions(i.id); }
+    });
+    render();
+    settingsPanel.classList.remove('open');
+  });
+
+  document.getElementById('btnTest').addEventListener('click', function(){
+    var msg = document.getElementById('settingsMsg');
+    var url = (document.getElementById('backendUrl').value.trim() || 'http://localhost:5000').replace(/\/$/, '');
+    var zip = document.getElementById('zipInput').value.trim();
+    msg.className = 'settings-msg';
+    msg.textContent = 'Testing…';
+    fetch(url + '/api/health').then(function(health){
+      if(!health.ok) throw new Error('Backend did not respond to /api/health');
+      if(zip){
+        return fetch(url + '/api/location?zip=' + encodeURIComponent(zip)).then(function(loc){
+          return loc.json().then(function(body){
+            if(!loc.ok) throw new Error(body.error || 'Location lookup failed');
+            msg.className = 'settings-msg ok';
+            msg.textContent = 'Connected — found ' + body.name + ' near ' + zip + '.';
+          });
+        });
+      }
+      msg.className = 'settings-msg ok';
+      msg.textContent = 'Backend is reachable. Add a ZIP code to test the full lookup.';
+    }).catch(function(err){
+      msg.className = 'settings-msg err';
+      msg.textContent = 'Could not connect: ' + err.message + '. Is the backend running (see README)?';
+    });
+  });
+
+  // Manual entry
+  var manualRow = document.getElementById('manualRow');
+  var manualInput = document.getElementById('manualInput');
+  document.getElementById('manualToggle').addEventListener('click', function(){
+    manualRow.classList.toggle('open');
+    if(manualRow.classList.contains('open')) manualInput.focus();
+  });
+  document.getElementById('manualAdd').addEventListener('click', submitManual);
+  manualInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitManual(); });
+  function submitManual(){
+    var v = manualInput.value.trim();
+    if(!v) return;
+    addItem(v);
+    manualInput.value = '';
+  }
+
+  // Speech recognition
+  var micBtn = document.getElementById('micBtn');
+  var micHint = document.getElementById('micHint');
+  var liveTranscript = document.getElementById('liveTranscript');
+  var supportWarning = document.getElementById('supportWarning');
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recognition = null;
+  var listening = false;
+
+  if(SpeechRecognition){
+    try{
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = function(){
+        listening = true;
+        micBtn.classList.add('listening');
+        micHint.innerHTML = '<strong>Listening…</strong> say what you are shopping for.';
+        liveTranscript.textContent = '';
+      };
+      recognition.onresult = function(e){
+        var interim = '', final = '';
+        for(var i=e.resultIndex;i<e.results.length;i++){
+          var t = e.results[i][0].transcript;
+          if(e.results[i].isFinal) final += t; else interim += t;
+        }
+        liveTranscript.textContent = final || interim;
+        if(final) addItem(final);
+      };
+      recognition.onerror = function(e){
+        listening = false;
+        micBtn.classList.remove('listening');
+        if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+          micHint.innerHTML = '<strong>Mic access blocked.</strong> Type your item instead.';
+          manualRow.classList.add('open');
+        } else if(e.error === 'no-speech'){
+          micHint.innerHTML = '<strong>Did not catch that.</strong> Tap the mic and try again.';
+        } else {
+          micHint.innerHTML = '<strong>Tap and say</strong> what you are shopping for — Blurt will pull up real prices to choose from.';
+        }
+      };
+      recognition.onend = function(){
+        listening = false;
+        micBtn.classList.remove('listening');
+        if(!liveTranscript.textContent){
+          micHint.innerHTML = '<strong>Tap and say</strong> what you are shopping for — Blurt will pull up real prices to choose from.';
+        }
+      };
+    }catch(err){ recognition = null; }
+  }
+
+  if(!recognition){
+    supportWarning.style.display = 'block';
+    supportWarning.textContent = 'Voice input is not available in this browser or is blocked in this preview. Use "type it instead" below.';
+    manualRow.classList.add('open');
+  }
+
+  micBtn.addEventListener('click', function(){
+    if(!recognition){ manualRow.classList.add('open'); manualInput.focus(); return; }
+    if(listening){ recognition.stop(); }
+    else{
+      try{ recognition.start(); }
+      catch(err){
+        supportWarning.style.display = 'block';
+        supportWarning.textContent = 'Could not start the microphone. Use "type it instead" below.';
+        manualRow.classList.add('open');
+      }
+    }
+  });
+
+  loadAll();
+  render();
+})();
+</script>
+</body>
+</html>
