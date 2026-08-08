@@ -393,6 +393,11 @@
   }
   .recipe-result-thumb{ width:44px; height:44px; border-radius:7px; object-fit:cover; flex-shrink:0; background:var(--paper-dim); }
   .recipe-result-name{ flex:1; font-size:13px; color:var(--ink); }
+  .recipe-add-btn-sm{
+    background:var(--pink); color:var(--paper); border:none; border-radius:14px;
+    font-size:10.5px; padding:6px 10px; cursor:pointer; white-space:nowrap; font-weight:600;
+  }
+  .recipe-add-btn-sm:hover{ background:var(--pink-deep); }
   .recipe-save-btn{
     background:var(--ink); color:var(--paper); border:none; border-radius:14px;
     font-size:11px; padding:6px 12px; cursor:pointer; white-space:nowrap; font-weight:600;
@@ -510,7 +515,7 @@
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, etc.) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order. Walmart and Target aren't connected — neither has a free public pricing API.
-        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", and "what's my total" all work as spoken or typed commands instead of being added as items.
+        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
       </div>
     </header>
 
@@ -545,6 +550,7 @@
       <div class="mic-hint" id="micHint"><strong>Tap and say</strong> what you're shopping for — you can list a few things at once, like "carrots and potatoes."</div>
       <div class="live-transcript" id="liveTranscript"></div>
       <button class="manual-toggle" id="manualToggle">or type it instead</button>
+      <button class="manual-toggle" id="findRecipeBtn">🍳 or find a recipe instead</button>
       <div class="manual-row" id="manualRow">
         <input type="text" id="manualInput" placeholder="e.g. carrots and potatoes" maxlength="120">
         <button id="manualAdd">Add</button>
@@ -627,7 +633,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.1.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.2.0</span></footer>
 </div>
 
 <script>
@@ -1259,15 +1265,47 @@
   // ---------- Voice / typed command interpreter ----------
   // Runs before treating text as items to add — lets "clear list" etc. work
   // the same whether spoken or typed. Returns true if a command was matched.
+  function announceBudget(){
+    if(!('speechSynthesis' in window)) return;
+    var text;
+    if(settings.budget === null || settings.budget === undefined){
+      text = 'No budget is set right now.';
+    } else {
+      var totalPrice = computeResolvedTotal();
+      var remaining = settings.budget - totalPrice;
+      text = 'Your budget is ' + fmt(settings.budget) + '.';
+      text += remaining < 0 ? ' You are ' + fmt(Math.abs(remaining)) + ' over.' : ' You have ' + fmt(remaining) + ' left.';
+    }
+    try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }catch(e){}
+  }
+
+  function setBudgetAmount(amount){
+    settings.budget = Math.max(0, amount);
+    saveSettings(); render(); announceBudget();
+  }
+
+  function runRecipeSearchCommand(query){
+    setActiveTab('search');
+    var input = document.getElementById('recipeSearchInput');
+    input.value = query;
+    searchRecipes();
+  }
+
   function tryRunCommand(text){
-    var t = text.trim().toLowerCase().replace(/[.!?]+$/, '');
+    var trimmedOriginal = text.trim();
+    var t = trimmedOriginal.toLowerCase().replace(/[.!?]+$/, '');
     var commandTable = [
       { patterns: ['clear list', 'reset list', 'clear my list', 'empty the list', 'empty my list', 'start over', 'clear everything'], action: resetList },
       { patterns: ['reset location', 'refresh location', 'update location', 'change location', 'recheck location', 'find closer store', 'find a closer store'], action: refreshLocation },
       { patterns: ['recheck prices', 'check prices', 'update prices', 'refresh prices'], action: recheckAll },
       { patterns: ['clear picked up', 'clear checked', 'clear picked items', 'clear my picked up items'], action: clearPicked },
       { patterns: ['pick cheapest', 'pick cheapest for everything', 'pick cheapest for all', 'choose cheapest for everything', 'auto pick cheapest'], action: pickCheapestForAll },
-      { patterns: ['read my total', 'whats my total', "what's my total", 'read total', 'how much so far', 'whats my list', "what's my list", 'read my list', 'read list'], action: speakSummary }
+      { patterns: ['read my total', 'whats my total', "what's my total", 'read total', 'how much so far', 'whats my list', "what's my list", 'read my list', 'read list'], action: speakSummary },
+      { patterns: ['clear budget', 'remove budget', 'cancel budget', 'delete budget', 'no budget'], action: function(){ settings.budget = null; saveSettings(); render(); announceBudget(); } },
+      { patterns: ['whats my budget', "what's my budget", 'check my budget', 'how much is my budget', 'read my budget'], action: announceBudget },
+      { patterns: ['go to recipes', 'open recipes', 'find a recipe', 'search for a recipe', 'search recipes'], action: function(){ setActiveTab('search'); document.getElementById('recipeSearchInput').focus(); } },
+      { patterns: ['go to shopping', 'go to shop', 'go shopping', 'open shopping list', 'switch to shopping'], action: function(){ setActiveTab('shop'); } },
+      { patterns: ['go to saved', 'open saved recipes', 'show my saved recipes', 'show saved lists'], action: function(){ setActiveTab('saved'); } }
     ];
     for(var i = 0; i < commandTable.length; i++){
       if(commandTable[i].patterns.indexOf(t) !== -1){
@@ -1275,6 +1313,19 @@
         return true;
       }
     }
+
+    var setBudgetMatch = t.match(/^set (?:my )?budget (?:to|at)?\s*\$?(\d+(?:\.\d+)?)$/);
+    if(setBudgetMatch){ setBudgetAmount(parseFloat(setBudgetMatch[1])); return true; }
+
+    var increaseMatch = t.match(/^(?:increase|raise|add)(?: to)? (?:my )?budget(?: by)?\s*\$?(\d+(?:\.\d+)?)$/);
+    if(increaseMatch){ setBudgetAmount((settings.budget || 0) + parseFloat(increaseMatch[1])); return true; }
+
+    var decreaseMatch = t.match(/^(?:decrease|lower|reduce|cut)(?: my)? budget(?: by)?\s*\$?(\d+(?:\.\d+)?)$/);
+    if(decreaseMatch){ setBudgetAmount((settings.budget || 0) - parseFloat(decreaseMatch[1])); return true; }
+
+    var recipeSearchMatch = trimmedOriginal.match(/^(?:search (?:for )?a recipe for|find (?:a |me a )?recipe for|recipe for|look up a recipe for|search recipes for)\s+(.+)$/i);
+    if(recipeSearchMatch){ runRecipeSearchCommand(recipeSearchMatch[1].trim()); return true; }
+
     return false;
   }
 
@@ -1691,6 +1742,10 @@
     manualRow.classList.toggle('open');
     if(manualRow.classList.contains('open')) manualInput.focus();
   });
+  document.getElementById('findRecipeBtn').addEventListener('click', function(){
+    setActiveTab('search');
+    document.getElementById('recipeSearchInput').focus();
+  });
   document.getElementById('manualAdd').addEventListener('click', submitManual);
   manualInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitManual(); });
   function submitManual(){
@@ -1793,6 +1848,27 @@
     recipeSearchResults = [];
   });
 
+  // Shared by both "add a saved recipe" and "quick-add straight from search
+  // results" — pushes a plain array of ingredient names into the shop list.
+  function pushIngredientNamesToShop(names){
+    names.forEach(function(name){
+      var item = {
+        id: 'i'+Date.now()+Math.random().toString(36).slice(2,7),
+        query: name,
+        status: isConfigured() ? 'loading' : 'needs-setup',
+        results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
+        selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
+        betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
+        budgetNotice: null, editingName: false, skipped: false
+      };
+      items.unshift(item);
+      recordUsualItem(name);
+      if(item.status === 'loading') fetchOptions(item.id);
+    });
+    render(); saveList();
+    setActiveTab('shop');
+  }
+
   function renderRecipeSearchResults(){
     var resultsEl = document.getElementById('recipeSearchResults');
     resultsEl.innerHTML = recipeSearchResults.map(function(meal){
@@ -1800,15 +1876,27 @@
       return '<div class="recipe-result-row">' +
         '<img class="recipe-result-thumb" src="' + escapeHtml(meal.strMealThumb || '') + '" alt="" loading="lazy">' +
         '<span class="recipe-result-name">' + escapeHtml(meal.strMeal) + '</span>' +
+        '<button class="recipe-add-btn-sm" data-quickadd-meal="' + escapeHtml(meal.idMeal) + '" title="Add ingredients to your shopping list without saving">+ Add to list</button>' +
         '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" data-save-meal="' + escapeHtml(meal.idMeal) + '">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
       '</div>';
     }).join('');
     resultsEl.querySelectorAll('[data-save-meal]').forEach(function(btn){
-      btn.addEventListener('click', function(){ saveMealAsRecipe(btn.getAttribute('data-save-meal')); });
+      btn.addEventListener('click', function(){ toggleSaveMeal(btn.getAttribute('data-save-meal')); });
+    });
+    resultsEl.querySelectorAll('[data-quickadd-meal]').forEach(function(btn){
+      btn.addEventListener('click', function(){ quickAddMealToShop(btn.getAttribute('data-quickadd-meal')); });
     });
   }
 
+  function quickAddMealToShop(mealId){
+    var meal = recipeSearchResults.find(function(m){ return m.idMeal === mealId; });
+    if(!meal) return;
+    var names = extractMealIngredients(meal).map(function(ing){ return ing.searchTerm; });
+    pushIngredientNamesToShop(names);
+  }
+
   function saveMealAsRecipe(mealId){
+    if(recipes.some(function(r){ return r.sourceId === mealId; })) return; // already saved, don't duplicate
     var meal = recipeSearchResults.find(function(m){ return m.idMeal === mealId; });
     if(!meal) return;
     var sourceUrl = (meal.strSource && meal.strSource.trim()) ? meal.strSource.trim() : ('https://www.themealdb.com/meal/' + meal.idMeal);
@@ -1826,6 +1914,23 @@
     saveRecipes();
     renderRecipeSearchResults();
     renderRecipeList();
+  }
+
+  // Clicking "Save" the first time saves it; clicking it again (now showing
+  // "Saved ✓") removes it instead of silently creating a duplicate — that
+  // duplicate-on-accidental-second-click was a real bug, not just a nicety.
+  function toggleSaveMeal(mealId){
+    var existing = recipes.filter(function(r){ return r.sourceId === mealId; });
+    if(existing.length > 0){
+      var ok = window.confirm('Remove this recipe from your saved list?');
+      if(!ok) return;
+      recipes = recipes.filter(function(r){ return r.sourceId !== mealId; });
+      saveRecipes();
+      renderRecipeSearchResults();
+      renderRecipeList();
+    } else {
+      saveMealAsRecipe(mealId);
+    }
   }
 
   // Manual "build a list from scratch" (also doubles as a manual recipe saver)
@@ -1861,31 +1966,20 @@
   });
 
   function removeRecipe(id){
+    var recipe = recipes.find(function(r){ return r.id === id; });
+    if(!recipe) return;
+    var ok = window.confirm('Remove "' + recipe.name + '" from your saved recipes & lists? This cannot be undone.');
+    if(!ok) return;
     recipes = recipes.filter(function(r){ return r.id !== id; });
     saveRecipes();
     renderRecipeList();
+    renderRecipeSearchResults();
   }
 
   function addRecipeToShoppingList(id){
     var recipe = recipes.find(function(r){ return r.id === id; });
     if(!recipe) return;
-    recipe.ingredients.forEach(function(ing){
-      var name = ing.searchTerm;
-      var item = {
-        id: 'i'+Date.now()+Math.random().toString(36).slice(2,7),
-        query: name,
-        status: isConfigured() ? 'loading' : 'needs-setup',
-        results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
-        selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
-        betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null, editingName: false, skipped: false
-      };
-      items.unshift(item);
-      recordUsualItem(name);
-      if(item.status === 'loading') fetchOptions(item.id);
-    });
-    render(); saveList();
-    setActiveTab('shop');
+    pushIngredientNamesToShop(recipe.ingredients.map(function(ing){ return ing.searchTerm; }));
   }
 
   function toggleRecipeExpanded(id){
