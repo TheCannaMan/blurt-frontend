@@ -243,6 +243,18 @@
   .item-card.picked .pick-btn svg{ opacity:1; }
   .item-card.picked .item-query{ text-decoration:line-through; color:var(--muted); }
   .pick-btn-spacer{ width:20px; flex-shrink:0; }
+  .have-btn{
+    width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line); background:#fff;
+    cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; padding:0; color:var(--muted);
+  }
+  .have-btn svg{ width:11px; height:11px; }
+  .have-btn:hover{ border-color:var(--green); color:var(--green); }
+  .skipped-btn{ background:var(--muted) !important; border-color:var(--muted) !important; }
+  .skipped-note{
+    font-size:12px; color:var(--muted); background:var(--paper-dim); border-radius:8px;
+    padding:9px 11px; max-width:320px; line-height:1.5;
+  }
+  .unskip-link{ background:none; border:none; color:var(--pink-deep); text-decoration:underline; cursor:pointer; font-size:11.5px; padding:0; margin-left:4px; }
   .item-query{ flex:1; font-size:14.5px; font-weight:600; }
   .item-query.editable{ cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; color:var(--pink-deep); }
   .item-query.editable:hover{ color:var(--pink); }
@@ -284,6 +296,9 @@
   .option-info{ flex:1; min-width:0; }
   .option-desc{ font-size:12.5px; color:var(--ink); line-height:1.4; }
   .option-desc small{ display:block; color:var(--muted); font-size:10.5px; margin-top:1px; }
+  .clickable-thumb{ cursor:zoom-in; }
+  .clickable-name{ cursor:pointer; }
+  .clickable-name:hover{ text-decoration:underline; text-underline-offset:2px; }
   .aisle-tag{
     display:inline-block; margin-top:3px; font-family:'IBM Plex Mono',monospace; font-size:9.5px;
     color:var(--muted); background:var(--paper-dim); border-radius:4px; padding:1px 5px;
@@ -425,10 +440,40 @@
   .recipe-empty{ text-align:center; padding:24px 10px 10px; color:var(--muted); font-size:13px; }
 
   @media (prefers-reduced-motion: reduce){ .ring, .spinner{ animation:none !important; } }
+
+  /* Modal — used for both the image lightbox and the product detail view */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(20,23,28,0.82);
+    z-index:100; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--paper); border-radius:12px; max-width:400px; width:100%;
+    max-height:85vh; overflow-y:auto; position:relative; padding:20px;
+  }
+  .modal-close{
+    position:absolute; top:10px; right:10px; background:var(--ink); color:var(--paper);
+    border:none; border-radius:50%; width:28px; height:28px; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; line-height:1; z-index:2;
+  }
+  .modal-image{ width:100%; border-radius:8px; display:block; }
+  .modal-detail-name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px; margin:6px 30px 12px 0; }
+  .modal-detail-row{
+    display:flex; justify-content:space-between; gap:10px; font-size:12.5px;
+    padding:7px 0; border-bottom:1px dashed var(--line); color:var(--ink-soft);
+  }
+  .modal-detail-row:last-child{ border-bottom:none; }
+  .modal-detail-row span:first-child{ color:var(--muted); }
 </style>
 </head>
 <body>
 <div class="app">
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox">
+      <button class="modal-close" id="modalCloseBtn" aria-label="Close">×</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
   <div class="receipt">
     <header>
       <div class="top-row">
@@ -582,7 +627,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.0.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.1.0</span></footer>
 </div>
 
 <script>
@@ -915,7 +960,7 @@
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
         betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null, editingName: false
+        budgetNotice: null, editingName: false, skipped: false
       };
       items.unshift(item);
       recordUsualItem(q);
@@ -1124,6 +1169,14 @@
     var it = items.find(function(i){ return i.id === id; });
     if(it){ it.picked = !it.picked; saveList(); render(); }
   }
+  function skipItem(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(it){ it.skipped = true; saveList(); render(); }
+  }
+  function unskipItem(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(it){ it.skipped = false; saveList(); render(); }
+  }
   function clearPicked(){
     items = items.filter(function(i){ return !i.picked; });
     saveList(); render();
@@ -1231,12 +1284,13 @@
   });
 
   function iconCheck(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'; }
+  function iconHouse(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>'; }
   function iconSort(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>'; }
   function iconBag(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>'; }
 
   function thumbHtml(imageUrl, sizeClass){
     if(imageUrl){
-      return '<img class="' + sizeClass + '" src="' + escapeHtml(imageUrl) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;' + sizeClass + ' placeholder&quot;>' + iconBag().replace(/"/g,'&quot;') + '</div>\'">';
+      return '<img class="' + sizeClass + ' clickable-thumb" src="' + escapeHtml(imageUrl) + '" alt="" loading="lazy" data-view-image="' + escapeHtml(imageUrl) + '" onerror="this.outerHTML=\'<div class=&quot;' + sizeClass + ' placeholder&quot;>' + iconBag().replace(/"/g,'&quot;') + '</div>\'">';
     }
     return '<div class="' + sizeClass + ' placeholder">' + iconBag() + '</div>';
   }
@@ -1273,7 +1327,7 @@
       var descLine = (p.brand ? escapeHtml(p.brand) + ' — ' : '') + escapeHtml(p.description);
       return '<div class="option-row' + (isSelected ? ' selected' : '') + '">' +
         thumbHtml(p.imageUrl, 'option-thumb') +
-        '<div class="option-info"><div class="option-desc">' + descLine +
+        '<div class="option-info"><div class="option-desc clickable-name" data-view-detail="' + it.id + '|' + p.productId + '">' + descLine +
           (p.size ? '<small>' + escapeHtml(p.size) + '</small>' : '') + '</div>' + aisleTagHtml(p) + '</div>' +
         '<div class="option-price' + (price === cheapest ? ' cheapest' : '') + '">' + fmt(price) + wasHtml + '</div>' +
         '<button class="select-btn' + (isSelected ? ' is-selected' : '') + '" data-select="' + it.id + '|' + p.productId + '">' + (isSelected ? 'Selected ✓' : 'Select') + '</button>' +
@@ -1289,6 +1343,9 @@
   }
 
   function itemBodyHtml(it){
+    if(it.skipped){
+      return '<div class="skipped-note">Already have this — not included in your total. <button class="unskip-link" data-unskip="' + it.id + '">need it after all →</button></div>';
+    }
     if(it.status === 'needs-setup'){
       return '<div class="setup-needed">Set your shopping location above to see prices for "' + escapeHtml(it.query) + '".</div>';
     }
@@ -1335,7 +1392,7 @@
     return alertHtml + '<div class="chosen-row">' +
         thumbHtml(product.imageUrl, 'chosen-thumb') +
         '<div class="chosen-info">' +
-        '<div class="chosen-desc">' + descLine + (product.size ? '<small>' + escapeHtml(product.size) + '</small>' : '') + '</div>' +
+        '<div class="chosen-desc clickable-name" data-view-detail="' + it.id + '|' + product.productId + '">' + descLine + (product.size ? '<small>' + escapeHtml(product.size) + '</small>' : '') + '</div>' +
         aisleTagHtml(product) +
         '<div class="chosen-meta">' +
           '<div class="qty-stepper">' +
@@ -1351,8 +1408,8 @@
 
   function displayOrder(){
     if(sortMode === 'added') return items.slice();
-    var unresolved = items.filter(function(i){ return i.status !== 'resolved'; });
-    var resolved = items.filter(function(i){ return i.status === 'resolved'; });
+    var unresolved = items.filter(function(i){ return i.status !== 'resolved' && !i.skipped; });
+    var resolved = items.filter(function(i){ return i.status === 'resolved' || i.skipped; });
 
     function aisleOf(it){
       var p = selectedProduct(it);
@@ -1379,6 +1436,66 @@
     return unresolved.concat(resolved);
   }
 
+  // ---------- Modal (image lightbox + product detail) ----------
+  var modalOverlay = document.getElementById('modalOverlay');
+  var modalContent = document.getElementById('modalContent');
+
+  function openModal(html){
+    modalContent.innerHTML = html;
+    modalOverlay.classList.add('open');
+  }
+  function closeModal(){
+    modalOverlay.classList.remove('open');
+    modalContent.innerHTML = '';
+  }
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', function(e){
+    if(e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && modalOverlay.classList.contains('open')) closeModal();
+  });
+
+  function openImageModal(url){
+    openModal('<img class="modal-image" src="' + escapeHtml(url) + '" alt="">');
+  }
+
+  function findProductRef(itemId, productId){
+    var it = items.find(function(i){ return i.id === itemId; });
+    if(!it || !it.results) return null;
+    return it.results.find(function(p){ return p.productId === productId; }) || null;
+  }
+
+  function openDetailModal(itemId, productId){
+    var product = findProductRef(itemId, productId);
+    if(!product) return;
+    var price = product.promoPrice || product.regularPrice;
+    var rows = [];
+    if(product.brand) rows.push(['Brand', product.brand]);
+    if(product.size) rows.push(['Size', product.size]);
+    rows.push(['Price', fmt(price) + (product.promoPrice ? ' (was ' + fmt(product.regularPrice) + ')' : '')]);
+    if(product.category) rows.push(['Category', product.category]);
+    if(product.aisleNumber) rows.push(['Aisle', product.aisleNumber + (product.aisleDescription ? ' — ' + product.aisleDescription : '')]);
+    var rowsHtml = rows.map(function(r){
+      return '<div class="modal-detail-row"><span>' + escapeHtml(r[0]) + '</span><span>' + escapeHtml(r[1]) + '</span></div>';
+    }).join('');
+    var imgHtml = product.imageUrl ? '<img class="modal-image" style="margin-bottom:10px;" src="' + escapeHtml(product.imageUrl) + '" alt="">' : '';
+    openModal(imgHtml + '<div class="modal-detail-name">' + escapeHtml(product.description) + '</div>' + rowsHtml);
+  }
+
+  // Global delegation for image/detail clicks — these appear inside
+  // dynamically-rendered list HTML, so a single document-level listener
+  // is simpler and more reliable than re-binding after every render().
+  document.addEventListener('click', function(e){
+    var imgTarget = e.target.closest('[data-view-image]');
+    if(imgTarget){ openImageModal(imgTarget.getAttribute('data-view-image')); return; }
+    var nameTarget = e.target.closest('[data-view-detail]');
+    if(nameTarget){
+      var parts = nameTarget.getAttribute('data-view-detail').split('|');
+      openDetailModal(parts[0], parts[1]);
+    }
+  });
+
   function render(){
     var listEl = document.getElementById('list');
     var countChip = document.getElementById('countChip');
@@ -1386,16 +1503,18 @@
     var totalSub = document.getElementById('totalSub');
 
     var resolvedItems = items.filter(function(i){ return i.status === 'resolved'; });
+    var skippedItems = items.filter(function(i){ return i.skipped; });
     var totalItems = resolvedItems.reduce(function(sum,i){ return sum + i.qty; }, 0);
     var totalPrice = computeResolvedTotal();
     var pickedCount = resolvedItems.filter(function(i){ return i.picked; }).length;
-    var pendingCount = items.length - resolvedItems.length;
+    var pendingCount = items.filter(function(i){ return i.status !== 'resolved' && !i.skipped; }).length;
     var betterCount = resolvedItems.filter(function(i){ return i.betterPriceAvailable; }).length;
 
     countChip.textContent = totalItems + (totalItems===1?' item':' items');
     totalValue.textContent = fmt(totalPrice);
     var subParts = [totalItems + (totalItems===1?' item':' items')];
     if(pickedCount) subParts.push(pickedCount + ' picked up');
+    if(skippedItems.length) subParts.push(skippedItems.length + ' already have');
     if(pendingCount) subParts.push(pendingCount + ' still choosing');
     if(betterCount) subParts.push(betterCount + ' price drop' + (betterCount===1?'':'s'));
     totalSub.textContent = subParts.join(' · ');
@@ -1438,13 +1557,17 @@
 
     var order = displayOrder();
     listEl.innerHTML = order.map(function(it){
-      var canPick = it.status === 'resolved';
-      var headActions = canPick
-        ? '<button class="pick-btn" data-pick="' + it.id + '">' + iconCheck() + '</button>'
-        : '<span class="pick-btn-spacer"></span>';
+      var headActions;
+      if(it.status === 'resolved'){
+        headActions = '<button class="pick-btn" data-pick="' + it.id + '" title="Mark picked up in-store">' + iconCheck() + '</button>';
+      } else if(it.skipped){
+        headActions = '<button class="pick-btn skipped-btn" data-unskip="' + it.id + '" title="Already have this — tap to undo">' + iconCheck() + '</button>';
+      } else {
+        headActions = '<button class="have-btn" data-skip="' + it.id + '" title="Already have this at home — skip shopping for it">' + iconHouse() + '</button>';
+      }
 
       var isEmptyChoosing = it.status === 'choosing' && (!it.results || it.results.length === 0);
-      var editable = it.status === 'error' || isEmptyChoosing;
+      var editable = !it.skipped && (it.status === 'error' || isEmptyChoosing);
 
       var nameHtml;
       if(it.editingName){
@@ -1455,7 +1578,7 @@
         nameHtml = '<span class="item-query">' + escapeHtml(it.query) + '</span>';
       }
 
-      return '<div class="item-card' + (it.picked ? ' picked' : '') + '">' +
+      return '<div class="item-card' + (it.picked || it.skipped ? ' picked' : '') + '">' +
         '<div class="item-card-head">' +
           headActions +
           nameHtml +
@@ -1492,6 +1615,8 @@
     });
 
     listEl.querySelectorAll('[data-pick]').forEach(function(btn){ btn.addEventListener('click', function(){ togglePicked(btn.getAttribute('data-pick')); }); });
+    listEl.querySelectorAll('[data-skip]').forEach(function(btn){ btn.addEventListener('click', function(){ skipItem(btn.getAttribute('data-skip')); }); });
+    listEl.querySelectorAll('[data-unskip]').forEach(function(btn){ btn.addEventListener('click', function(){ unskipItem(btn.getAttribute('data-unskip')); }); });
     listEl.querySelectorAll('[data-remove]').forEach(function(btn){ btn.addEventListener('click', function(){ removeItem(btn.getAttribute('data-remove')); }); });
     listEl.querySelectorAll('[data-retry]').forEach(function(btn){ btn.addEventListener('click', function(){ fetchOptions(btn.getAttribute('data-retry')); }); });
     listEl.querySelectorAll('[data-sort]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleSort(btn.getAttribute('data-sort')); }); });
@@ -1753,7 +1878,7 @@
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
         betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null, editingName: false
+        budgetNotice: null, editingName: false, skipped: false
       };
       items.unshift(item);
       recordUsualItem(name);
@@ -1854,6 +1979,22 @@
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   var recognition = null;
   var listening = false;
+  var micResetTimer = null;
+
+  var IDLE_MIC_HINT = '<strong>Tap and say</strong> what you are shopping for — you can list a few things at once.';
+
+  function scheduleMicUiReset(){
+    clearTimeout(micResetTimer);
+    micResetTimer = setTimeout(function(){
+      micHint.innerHTML = IDLE_MIC_HINT;
+      liveTranscript.textContent = '';
+      if(listening){
+        try{ recognition.stop(); }catch(e){}
+        listening = false;
+        micBtn.classList.remove('listening');
+      }
+    }, 15000);
+  }
 
   if(SpeechRecognition){
     try{
@@ -1867,6 +2008,7 @@
         micBtn.classList.add('listening');
         micHint.innerHTML = '<strong>Listening…</strong> say what you are shopping for.';
         liveTranscript.textContent = '';
+        scheduleMicUiReset();
       };
       recognition.onresult = function(e){
         var interim = '', final = '';
@@ -1876,6 +2018,7 @@
         }
         liveTranscript.textContent = final || interim;
         if(final){ if(!tryRunCommand(final)) addItems(final); }
+        scheduleMicUiReset();
       };
       recognition.onerror = function(e){
         listening = false;
@@ -1886,15 +2029,17 @@
         } else if(e.error === 'no-speech'){
           micHint.innerHTML = '<strong>Did not catch that.</strong> Tap the mic and try again.';
         } else {
-          micHint.innerHTML = '<strong>Tap and say</strong> what you are shopping for — you can list a few things at once.';
+          micHint.innerHTML = IDLE_MIC_HINT;
         }
+        scheduleMicUiReset();
       };
       recognition.onend = function(){
         listening = false;
         micBtn.classList.remove('listening');
         if(!liveTranscript.textContent){
-          micHint.innerHTML = '<strong>Tap and say</strong> what you are shopping for — you can list a few things at once.';
+          micHint.innerHTML = IDLE_MIC_HINT;
         }
+        scheduleMicUiReset();
       };
     }catch(err){ recognition = null; }
   }
