@@ -546,7 +546,7 @@
 
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <div class="info-panel" id="infoPanel">
-        Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, etc.) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order. Walmart and Target aren't connected — neither has a free public pricing API.
+        Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
         <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
       </div>
     </header>
@@ -673,7 +673,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.6.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.7.0</span></footer>
 </div>
 
 <script>
@@ -1709,16 +1709,47 @@
     }); });
   }
 
-  document.getElementById('feedbackBtn').addEventListener('click', function(){
+  function diagnosticBlock(){
     var version = document.getElementById('versionTag').textContent;
-    var subject = 'Blurt feedback (' + version + ')';
-    var body = 'What happened:\n\n\nWhat you expected:\n\n\n---\n' +
+    return '---\n' +
       'App version: ' + version + '\n' +
       'Backend URL: ' + settings.backendUrl + '\n' +
       'Location set: ' + (hasLocation() ? 'yes' : 'no') + '\n' +
       'Items in list: ' + items.length + '\n' +
       'Browser: ' + navigator.userAgent;
+  }
+
+  function sendMailto(subjectPrefix, body){
+    var version = document.getElementById('versionTag').textContent;
+    var subject = subjectPrefix + ' (' + version + ')';
     window.location.href = 'mailto:nicclifton@outlook.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  }
+
+  function sendGeneralFeedback(){
+    var body = 'What happened:\n\n\nWhat you expected:\n\n\n' + diagnosticBlock();
+    sendMailto('Blurt feedback', body);
+  }
+
+  function sendBugReport(){
+    var body = 'What happened:\n\n\n' +
+      'Steps to reproduce:\n1. \n2. \n3. \n\n' +
+      'What you expected instead:\n\n\n' +
+      'Does it happen every time, or sometimes?\n\n\n' +
+      diagnosticBlock();
+    sendMailto('Blurt bug report', body);
+  }
+
+  document.getElementById('feedbackBtn').addEventListener('click', function(){
+    openModal(
+      '<div class="modal-detail-name">Feedback</div>' +
+      '<p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">What kind of feedback is this?</p>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        '<button class="recipe-add-btn-sm" id="generalFeedbackBtn" style="padding:10px;">💬 General feedback or idea</button>' +
+        '<button class="recipe-save-btn" id="bugReportBtn" style="padding:10px;">🐛 Report a bug</button>' +
+      '</div>'
+    );
+    document.getElementById('generalFeedbackBtn').addEventListener('click', function(){ closeModal(); sendGeneralFeedback(); });
+    document.getElementById('bugReportBtn').addEventListener('click', function(){ closeModal(); sendBugReport(); });
   });
 
   document.getElementById('clearPicked').addEventListener('click', clearPicked);
