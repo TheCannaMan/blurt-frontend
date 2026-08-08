@@ -327,6 +327,78 @@
   footer{ text-align:center; padding:16px 10px 0; font-size:10.5px; color:rgba(246,245,236,0.35); font-family:'IBM Plex Mono',monospace; line-height:1.8; }
   #versionTag{ opacity:0.6; }
 
+  /* Tab bar */
+  .tab-bar{ display:flex; padding:0 26px; gap:6px; margin-top:14px; }
+  .tab-btn{
+    flex:1; background:none; border:1px solid var(--line); border-bottom:none;
+    border-radius:10px 10px 0 0; padding:10px 6px; font-size:12.5px; font-weight:600;
+    color:var(--muted); cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .tab-btn.active{ background:var(--paper-dim); color:var(--ink); border-color:var(--line); }
+
+  /* Recipes & lists */
+  .recipe-search-zone{ padding:20px 26px 6px; border-bottom:1px dashed var(--line); }
+  .recipe-search-row{ display:flex; gap:8px; }
+  .recipe-search-row input{
+    flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink);
+  }
+  .recipe-search-row input:focus{ outline:2px solid var(--pink); outline-offset:1px; }
+  .recipe-search-row button{
+    background:var(--ink); color:var(--paper); border:none; border-radius:8px;
+    padding:0 16px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .manual-recipe-row{ display:none; flex-direction:column; gap:8px; margin-top:12px; }
+  .manual-recipe-row.open{ display:flex; }
+  .manual-recipe-row input, .manual-recipe-row textarea{
+    padding:9px 11px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:13px; color:var(--ink); resize:vertical;
+  }
+  .manual-recipe-row input:focus, .manual-recipe-row textarea:focus{ outline:2px solid var(--pink); outline-offset:1px; }
+  .manual-recipe-row button{
+    align-self:flex-start; background:var(--ink); color:var(--paper); border:none; border-radius:8px;
+    padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .recipe-search-status{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); margin-top:10px; display:flex; align-items:center; gap:6px; }
+  .recipe-search-results{ margin-top:8px; display:flex; flex-direction:column; gap:8px; padding-bottom:10px; }
+  .recipe-result-row{
+    display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px;
+  }
+  .recipe-result-thumb{ width:44px; height:44px; border-radius:7px; object-fit:cover; flex-shrink:0; background:var(--paper-dim); }
+  .recipe-result-name{ flex:1; font-size:13px; color:var(--ink); }
+  .recipe-save-btn{
+    background:var(--ink); color:var(--paper); border:none; border-radius:14px;
+    font-size:11px; padding:6px 12px; cursor:pointer; white-space:nowrap; font-weight:600;
+  }
+  .recipe-save-btn:hover{ background:var(--pink-deep); }
+  .recipe-save-btn.saved{ background:var(--green); }
+
+  .recipe-list{ padding:10px 26px 26px; }
+  .recipe-card{ padding:16px 0; border-bottom:1px dashed var(--line); }
+  .recipe-card:last-child{ border-bottom:none; }
+  .recipe-card-head{ display:flex; align-items:flex-start; gap:12px; }
+  .recipe-card-thumb{ width:56px; height:56px; border-radius:9px; object-fit:cover; flex-shrink:0; background:var(--paper-dim); }
+  .recipe-card-title{ flex:1; }
+  .recipe-card-name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; color:var(--ink); }
+  .recipe-card-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .recipe-remove-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
+  .recipe-remove-btn:hover{ color:var(--pink-deep); }
+  .recipe-ingredients{ margin:12px 0 0; padding-left:2px; list-style:none; }
+  .recipe-ingredients li{
+    font-size:12.5px; color:var(--ink-soft); padding:4px 0; border-bottom:1px dashed var(--line);
+  }
+  .recipe-ingredients li:last-child{ border-bottom:none; }
+  .recipe-card-actions{ display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  .recipe-add-btn{
+    background:var(--pink); color:var(--paper); border:none; border-radius:14px;
+    font-size:12px; padding:8px 14px; cursor:pointer; font-weight:600;
+  }
+  .recipe-add-btn:hover{ background:var(--pink-deep); }
+  .recipe-link{ font-size:11.5px; color:var(--ink-soft); text-decoration:underline; }
+  .recipe-link:hover{ color:var(--pink-deep); }
+  .recipe-empty{ text-align:center; padding:24px 10px 10px; color:var(--muted); font-size:13px; }
+
   @media (prefers-reduced-motion: reduce){ .ring, .spinner{ animation:none !important; } }
 </style>
 </head>
@@ -372,6 +444,12 @@
       </div>
     </header>
 
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabShopBtn" data-tab="shop">🛒 Shop</button>
+      <button class="tab-btn" id="tabRecipesBtn" data-tab="recipes">📖 Recipes & Lists</button>
+    </div>
+
+    <div id="shopSection">
     <div class="location-bar">
       <div class="location-row">
         <span class="location-icon">📍</span>
@@ -433,9 +511,34 @@
     </div>
     <div class="time-estimate" id="timeEstimateRow" style="display:none;"></div>
     <div class="list" id="list"></div>
+    </div>
+
+    <div id="recipesSection" style="display:none;">
+      <div class="recipe-search-zone">
+        <div class="recipe-search-row">
+          <input type="text" id="recipeSearchInput" placeholder="Search a recipe, e.g. lasagna" maxlength="80">
+          <button id="recipeSearchBtn">Search</button>
+        </div>
+        <button class="manual-toggle" id="manualRecipeToggle">or build a list from scratch</button>
+        <div class="manual-recipe-row" id="manualRecipeRow">
+          <input type="text" id="manualRecipeName" placeholder="List or recipe name" maxlength="80">
+          <textarea id="manualRecipeIngredients" placeholder="One ingredient per line&#10;e.g.&#10;2 cups flour&#10;1 tsp salt&#10;3 eggs" rows="4"></textarea>
+          <input type="text" id="manualRecipeLink" placeholder="Optional link (e.g. the recipe you're following)" maxlength="300">
+          <button id="manualRecipeSave">Save list</button>
+        </div>
+        <div class="recipe-search-status" id="recipeSearchStatus"></div>
+        <div class="recipe-search-results" id="recipeSearchResults"></div>
+      </div>
+
+      <div class="list-header">
+        <h2>Saved recipes &amp; lists</h2>
+      </div>
+      <div class="recipe-list" id="recipeList"></div>
+    </div>
+
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.8.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.9.0</span></footer>
 </div>
 
 <script>
@@ -443,6 +546,8 @@
   const LIST_KEY = 'blurt:items';
   const SETTINGS_KEY = 'blurt:settings';
   const USUAL_KEY = 'blurt:usual';
+  const RECIPES_KEY = 'blurt:recipes';
+  const MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1';
   const PRICE_EPSILON = 0.005;
 
   // Each item: {
@@ -455,6 +560,9 @@
   var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '', lat: null, lon: null, locationId: null, locationLabel: '', budget: null };
   var shopOrderMode = false;
   var usualItems = {}; // lowercase query -> { count, label, lastAdded }
+  var recipes = []; // { id, name, ingredients: [string,...], sourceUrl, thumbnail, createdAt }
+  var recipeSearchResults = [];
+  var activeTab = 'shop';
 
   function fmt(n){ return '$' + Number(n).toFixed(2); }
   function escapeHtml(s){
@@ -512,9 +620,14 @@
       var rawUsual = localStorage.getItem(USUAL_KEY);
       if(rawUsual){ try{ usualItems = JSON.parse(rawUsual); }catch(e){ usualItems = {}; } }
     }catch(e){}
+    try{
+      var rawRecipes = localStorage.getItem(RECIPES_KEY);
+      if(rawRecipes){ try{ recipes = JSON.parse(rawRecipes); }catch(e){ recipes = []; } }
+    }catch(e){}
     document.getElementById('backendUrl').value = settings.backendUrl || '';
     updateLocationDisplay();
     render();
+    renderRecipeList();
     // Quietly recheck resolved items' prices in the background, staggered
     // so we don't fire a burst of requests all at once.
     if(isConfigured()){
@@ -1352,6 +1465,198 @@
     if(!v) return;
     if(!tryRunCommand(v)) addItems(v);
     manualInput.value = '';
+  }
+
+  // ---------- Tabs ----------
+  function setActiveTab(tab){
+    activeTab = tab;
+    document.getElementById('shopSection').style.display = tab === 'shop' ? 'block' : 'none';
+    document.getElementById('recipesSection').style.display = tab === 'recipes' ? 'block' : 'none';
+    document.getElementById('tabShopBtn').classList.toggle('active', tab === 'shop');
+    document.getElementById('tabRecipesBtn').classList.toggle('active', tab === 'recipes');
+  }
+  document.getElementById('tabShopBtn').addEventListener('click', function(){ setActiveTab('shop'); });
+  document.getElementById('tabRecipesBtn').addEventListener('click', function(){ setActiveTab('recipes'); });
+
+  // ---------- Recipes & Lists ----------
+  function saveRecipes(){
+    try{ localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes)); }catch(e){}
+  }
+
+  // Strips a leading quantity/unit ("2 cups", "1/2 tsp", "3 cloves") off an
+  // ingredient line so the remainder searches cleanly against Kroger, while
+  // the original full line stays in the saved recipe for display.
+  function stripLeadingMeasure(line){
+    var t = line.trim();
+    var unitPattern = /^[\d½¼¾⅓⅔\.\/\s\-]+\s*(cups?|tbsps?|tablespoons?|tsps?|teaspoons?|oz|ounces?|lbs?|pounds?|kg|grams?|g|ml|liters?|litres?|l|pinch(es)?|cloves?|cans?|packages?|slices?|bunch(es)?|stalks?|sprigs?|large|medium|small)?\s*(of\s+)?/i;
+    t = t.replace(unitPattern, '');
+    t = t.trim();
+    if(!t) t = line.trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  function extractMealIngredients(meal){
+    var list = [];
+    for(var i = 1; i <= 20; i++){
+      var ing = meal['strIngredient' + i];
+      var measure = meal['strMeasure' + i];
+      if(ing && ing.trim()){
+        var line = (measure && measure.trim() ? measure.trim() + ' ' : '') + ing.trim();
+        list.push(line);
+      }
+    }
+    return list;
+  }
+
+  function searchRecipes(){
+    var query = document.getElementById('recipeSearchInput').value.trim();
+    if(!query) return;
+    var status = document.getElementById('recipeSearchStatus');
+    var resultsEl = document.getElementById('recipeSearchResults');
+    status.innerHTML = '<span class="spinner"></span> searching…';
+    resultsEl.innerHTML = '';
+    fetch(MEALDB_BASE + '/search.php?s=' + encodeURIComponent(query))
+      .then(function(resp){ return resp.json(); })
+      .then(function(data){
+        recipeSearchResults = data.meals || [];
+        if(recipeSearchResults.length === 0){
+          status.textContent = 'No recipes found for "' + query + '".';
+        } else {
+          status.textContent = recipeSearchResults.length + ' result' + (recipeSearchResults.length===1?'':'s') + ' — pick one to save.';
+        }
+        renderRecipeSearchResults();
+      })
+      .catch(function(){
+        status.textContent = 'Could not reach the recipe search right now.';
+      });
+  }
+  document.getElementById('recipeSearchBtn').addEventListener('click', searchRecipes);
+  document.getElementById('recipeSearchInput').addEventListener('keydown', function(e){ if(e.key === 'Enter') searchRecipes(); });
+
+  function renderRecipeSearchResults(){
+    var resultsEl = document.getElementById('recipeSearchResults');
+    resultsEl.innerHTML = recipeSearchResults.map(function(meal){
+      var alreadySaved = recipes.some(function(r){ return r.sourceId === meal.idMeal; });
+      return '<div class="recipe-result-row">' +
+        '<img class="recipe-result-thumb" src="' + escapeHtml(meal.strMealThumb || '') + '" alt="" loading="lazy">' +
+        '<span class="recipe-result-name">' + escapeHtml(meal.strMeal) + '</span>' +
+        '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" data-save-meal="' + escapeHtml(meal.idMeal) + '">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
+      '</div>';
+    }).join('');
+    resultsEl.querySelectorAll('[data-save-meal]').forEach(function(btn){
+      btn.addEventListener('click', function(){ saveMealAsRecipe(btn.getAttribute('data-save-meal')); });
+    });
+  }
+
+  function saveMealAsRecipe(mealId){
+    var meal = recipeSearchResults.find(function(m){ return m.idMeal === mealId; });
+    if(!meal) return;
+    var sourceUrl = (meal.strSource && meal.strSource.trim()) ? meal.strSource.trim() : ('https://www.themealdb.com/meal/' + meal.idMeal);
+    recipes.unshift({
+      id: 'r' + Date.now() + Math.random().toString(36).slice(2,7),
+      sourceId: meal.idMeal,
+      name: meal.strMeal,
+      ingredients: extractMealIngredients(meal),
+      sourceUrl: sourceUrl,
+      sourceLabel: (meal.strSource && meal.strSource.trim()) ? 'View original recipe' : 'View on TheMealDB',
+      thumbnail: meal.strMealThumb || null,
+      createdAt: Date.now()
+    });
+    saveRecipes();
+    renderRecipeSearchResults();
+    renderRecipeList();
+  }
+
+  // Manual "build a list from scratch" (also doubles as a manual recipe saver)
+  var manualRecipeRow = document.getElementById('manualRecipeRow');
+  document.getElementById('manualRecipeToggle').addEventListener('click', function(){
+    manualRecipeRow.classList.toggle('open');
+  });
+  document.getElementById('manualRecipeSave').addEventListener('click', function(){
+    var name = document.getElementById('manualRecipeName').value.trim();
+    var rawIngredients = document.getElementById('manualRecipeIngredients').value;
+    var link = document.getElementById('manualRecipeLink').value.trim();
+    if(!name){ document.getElementById('manualRecipeName').focus(); return; }
+    var ingredients = rawIngredients.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+    if(ingredients.length === 0){ document.getElementById('manualRecipeIngredients').focus(); return; }
+    recipes.unshift({
+      id: 'r' + Date.now() + Math.random().toString(36).slice(2,7),
+      sourceId: null,
+      name: name,
+      ingredients: ingredients,
+      sourceUrl: link || null,
+      sourceLabel: link ? 'View link' : null,
+      thumbnail: null,
+      createdAt: Date.now()
+    });
+    saveRecipes();
+    document.getElementById('manualRecipeName').value = '';
+    document.getElementById('manualRecipeIngredients').value = '';
+    document.getElementById('manualRecipeLink').value = '';
+    manualRecipeRow.classList.remove('open');
+    renderRecipeList();
+  });
+
+  function removeRecipe(id){
+    recipes = recipes.filter(function(r){ return r.id !== id; });
+    saveRecipes();
+    renderRecipeList();
+  }
+
+  function addRecipeToShoppingList(id){
+    var recipe = recipes.find(function(r){ return r.id === id; });
+    if(!recipe) return;
+    var cleaned = recipe.ingredients.map(stripLeadingMeasure);
+    cleaned.forEach(function(name){
+      var item = {
+        id: 'i'+Date.now()+Math.random().toString(36).slice(2,7),
+        query: name,
+        status: isConfigured() ? 'loading' : 'needs-setup',
+        results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
+        selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
+        betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
+        budgetNotice: null
+      };
+      items.unshift(item);
+      recordUsualItem(name);
+      if(item.status === 'loading') fetchOptions(item.id);
+    });
+    render(); saveList();
+    setActiveTab('shop');
+  }
+
+  function renderRecipeList(){
+    var listEl = document.getElementById('recipeList');
+    if(recipes.length === 0){
+      listEl.innerHTML = '<div class="recipe-empty">No saved recipes or lists yet.<br>Search above, or build one from scratch.</div>';
+      return;
+    }
+    listEl.innerHTML = recipes.map(function(r){
+      var thumbHtml = r.thumbnail ? '<img class="recipe-card-thumb" src="' + escapeHtml(r.thumbnail) + '" alt="">' : '';
+      var linkHtml = r.sourceUrl ? '<a class="recipe-link" href="' + escapeHtml(r.sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(r.sourceLabel || 'View link') + ' →</a>' : '';
+      return '<div class="recipe-card">' +
+        '<div class="recipe-card-head">' +
+          thumbHtml +
+          '<div class="recipe-card-title">' +
+            '<div class="recipe-card-name">' + escapeHtml(r.name) + '</div>' +
+            '<div class="recipe-card-meta">' + r.ingredients.length + ' ingredient' + (r.ingredients.length===1?'':'s') + '</div>' +
+          '</div>' +
+          '<button class="recipe-remove-btn" data-remove-recipe="' + r.id + '">×</button>' +
+        '</div>' +
+        '<ul class="recipe-ingredients">' + r.ingredients.map(function(ing){ return '<li>' + escapeHtml(ing) + '</li>'; }).join('') + '</ul>' +
+        '<div class="recipe-card-actions">' +
+          '<button class="recipe-add-btn" data-add-recipe="' + r.id + '">Add all to shopping list</button>' +
+          linkHtml +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    listEl.querySelectorAll('[data-remove-recipe]').forEach(function(btn){
+      btn.addEventListener('click', function(){ removeRecipe(btn.getAttribute('data-remove-recipe')); });
+    });
+    listEl.querySelectorAll('[data-add-recipe]').forEach(function(btn){
+      btn.addEventListener('click', function(){ addRecipeToShoppingList(btn.getAttribute('data-add-recipe')); });
+    });
   }
 
   // Speech recognition
