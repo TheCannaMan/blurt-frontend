@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blurt — say it before you forget it</title>
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#FF4D6D">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -306,6 +310,10 @@
         </div>
         <div class="top-actions">
           <div class="count-chip" id="countChip">0 in list</div>
+          <button class="settings-btn" id="feedbackBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 7 8-7"/></svg>
+            feedback
+          </button>
           <button class="settings-btn" id="settingsToggle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             setup
@@ -380,7 +388,7 @@
     <div class="list" id="list"></div>
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.4.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.6.0</span></footer>
 </div>
 
 <script>
@@ -903,6 +911,18 @@
       selectOption(parts[0], parts[1]);
     }); });
   }
+
+  document.getElementById('feedbackBtn').addEventListener('click', function(){
+    var version = document.getElementById('versionTag').textContent;
+    var subject = 'Blurt feedback (' + version + ')';
+    var body = 'What happened:\n\n\nWhat you expected:\n\n\n---\n' +
+      'App version: ' + version + '\n' +
+      'Backend URL: ' + settings.backendUrl + '\n' +
+      'Location set: ' + (hasLocation() ? 'yes' : 'no') + '\n' +
+      'Items in list: ' + items.length + '\n' +
+      'Browser: ' + navigator.userAgent;
+    window.location.href = 'mailto:nicclifton@outlook.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  });
 
   document.getElementById('clearPicked').addEventListener('click', clearPicked);
 
