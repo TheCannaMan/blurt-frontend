@@ -104,6 +104,14 @@
   .settings-msg{ margin-top:8px; font-size:11.5px; line-height:1.5; }
   .settings-msg.ok{ color:var(--green); }
   .settings-msg.err{ color:var(--pink-deep); }
+  .backup-section{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); }
+  .backup-label{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase;
+    letter-spacing:0.05em; color:var(--muted); margin-bottom:6px; font-weight:600;
+  }
+  .backup-msg{ margin-top:8px; font-size:11.5px; line-height:1.5; }
+  .backup-msg.ok{ color:var(--green); }
+  .backup-msg.err{ color:var(--pink-deep); }
   .info-btn{
     background:none; border:none; cursor:pointer; color:var(--muted);
     font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-decoration:underline;
@@ -510,6 +518,17 @@
           <button class="btn-save" id="btnSave">Save</button>
         </div>
         <div class="settings-msg" id="settingsMsg"></div>
+
+        <div class="backup-section">
+          <div class="backup-label">Backup</div>
+          <p>Everything lives on this device only. Export a backup file to keep somewhere safe or move to another device — import it there to restore.</p>
+          <div class="settings-row">
+            <button class="btn-test" id="exportBtn">Export backup</button>
+            <button class="btn-test" id="importBtnTrigger">Import backup</button>
+          </div>
+          <input type="file" id="importFileInput" accept="application/json" style="display:none;">
+          <div class="backup-msg" id="backupMsg"></div>
+        </div>
       </div>
 
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
@@ -633,7 +652,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.2.1</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.3.0</span></footer>
 </div>
 
 <script>
@@ -1734,6 +1753,74 @@
       msg.className = 'settings-msg err';
       msg.textContent = 'Could not connect: ' + err.message;
     });
+  });
+
+  // ---------- Backup: export/import everything as one JSON file ----------
+  // This is deliberately a single flat snapshot of every localStorage key —
+  // the same shape would become the payload for cloud sync later, so this
+  // isn't throwaway work even though it's a small, local-only feature today.
+  function exportBackup(){
+    var payload = {
+      exportedAt: new Date().toISOString(),
+      appVersion: document.getElementById('versionTag').textContent,
+      items: items,
+      recipes: recipes,
+      usualItems: usualItems,
+      settings: settings
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'blurt-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    var msg = document.getElementById('backupMsg');
+    msg.className = 'backup-msg ok';
+    msg.textContent = 'Backup downloaded.';
+  }
+  document.getElementById('exportBtn').addEventListener('click', exportBackup);
+
+  document.getElementById('importBtnTrigger').addEventListener('click', function(){
+    document.getElementById('importFileInput').click();
+  });
+  document.getElementById('importFileInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var msg = document.getElementById('backupMsg');
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      var data;
+      try{
+        data = JSON.parse(evt.target.result);
+      }catch(err){
+        msg.className = 'backup-msg err';
+        msg.textContent = 'Could not read that file — it does not look like a valid backup.';
+        return;
+      }
+      if(!data || typeof data !== 'object' || (!data.items && !data.recipes)){
+        msg.className = 'backup-msg err';
+        msg.textContent = 'That file does not look like a Blurt backup.';
+        return;
+      }
+      var ok = window.confirm('Import this backup? It will replace your current list, recipes, and settings on this device.');
+      if(!ok){ e.target.value = ''; return; }
+      try{
+        if(data.items) localStorage.setItem(LIST_KEY, JSON.stringify(data.items));
+        if(data.recipes) localStorage.setItem(RECIPES_KEY, JSON.stringify(data.recipes));
+        if(data.usualItems) localStorage.setItem(USUAL_KEY, JSON.stringify(data.usualItems));
+        if(data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
+        msg.className = 'backup-msg ok';
+        msg.textContent = 'Imported — reloading…';
+        setTimeout(function(){ location.reload(); }, 700);
+      }catch(err){
+        msg.className = 'backup-msg err';
+        msg.textContent = 'Import failed: ' + err.message;
+      }
+    };
+    reader.readAsText(file);
   });
 
   // Manual entry
