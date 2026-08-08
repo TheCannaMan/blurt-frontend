@@ -682,7 +682,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.4.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.5.0</span></footer>
 </div>
 
 <script>
@@ -1586,6 +1586,31 @@
     openModal(imgHtml + '<div class="modal-detail-name">' + escapeHtml(product.description) + '</div>' + rowsHtml);
   }
 
+  // Preview a recipe before deciding whether to save it — the full ingredient
+  // list plus a link out, with Add/Save actions right in the modal so a "yes,
+  // this one" decision doesn't require closing the preview first.
+  function openRecipePreviewModal(mealId){
+    var meal = findMealById(mealId);
+    if(!meal) return;
+    var ingredients = extractMealIngredients(meal);
+    var sourceUrl = (meal.strSource && meal.strSource.trim()) ? meal.strSource.trim() : ('https://www.themealdb.com/meal/' + meal.idMeal);
+    var sourceLabel = (meal.strSource && meal.strSource.trim()) ? 'View original recipe' : 'View on TheMealDB';
+    var alreadySaved = recipes.some(function(r){ return r.sourceId === meal.idMeal; });
+    var imgHtml = meal.strMealThumb ? '<img class="modal-image" style="margin-bottom:10px;" src="' + escapeHtml(meal.strMealThumb) + '" alt="">' : '';
+    var ingredientsHtml = ingredients.map(function(ing){ return '<li>' + escapeHtml(ing.display) + '</li>'; }).join('');
+    var html = imgHtml +
+      '<div class="modal-detail-name">' + escapeHtml(meal.strMeal) + '</div>' +
+      '<ul class="recipe-ingredients">' + ingredientsHtml + '</ul>' +
+      '<div class="recipe-card-actions" style="margin-top:14px;">' +
+        '<button class="recipe-add-btn-sm" id="previewAddBtn">+ Add to list</button>' +
+        '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" id="previewSaveBtn">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
+        '<a class="recipe-link" href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(sourceLabel) + ' →</a>' +
+      '</div>';
+    openModal(html);
+    document.getElementById('previewAddBtn').addEventListener('click', function(){ quickAddMealToShop(meal.idMeal); closeModal(); });
+    document.getElementById('previewSaveBtn').addEventListener('click', function(){ toggleSaveMeal(meal.idMeal); closeModal(); });
+  }
+
   // Global delegation for image/detail clicks — these appear inside
   // dynamically-rendered list HTML, so a single document-level listener
   // is simpler and more reliable than re-binding after every render().
@@ -1596,7 +1621,10 @@
     if(nameTarget){
       var parts = nameTarget.getAttribute('data-view-detail').split('|');
       openDetailModal(parts[0], parts[1]);
+      return;
     }
+    var previewTarget = e.target.closest('[data-preview-meal]');
+    if(previewTarget){ openRecipePreviewModal(previewTarget.getAttribute('data-preview-meal')); }
   });
 
   function render(){
@@ -2028,8 +2056,8 @@
     el.style.display = 'block';
     var alreadySaved = recipes.some(function(r){ return r.sourceId === randomMeal.idMeal; });
     el.innerHTML = '<div class="spotlight-card">' +
-      '<img class="spotlight-thumb" src="' + escapeHtml(randomMeal.strMealThumb || '') + '" alt="" data-view-image="' + escapeHtml(randomMeal.strMealThumb || '') + '">' +
-      '<div class="spotlight-name">' + escapeHtml(randomMeal.strMeal) + '</div>' +
+      '<img class="spotlight-thumb clickable-thumb" src="' + escapeHtml(randomMeal.strMealThumb || '') + '" alt="" data-preview-meal="' + escapeHtml(randomMeal.idMeal) + '">' +
+      '<div class="spotlight-name clickable-name" data-preview-meal="' + escapeHtml(randomMeal.idMeal) + '">' + escapeHtml(randomMeal.strMeal) + '</div>' +
       '<div class="spotlight-actions">' +
         '<button class="recipe-add-btn-sm" id="spotlightAddBtn">+ Add to list</button>' +
         '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" id="spotlightSaveBtn">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
@@ -2067,8 +2095,8 @@
     resultsEl.innerHTML = recipeSearchResults.map(function(meal){
       var alreadySaved = recipes.some(function(r){ return r.sourceId === meal.idMeal; });
       return '<div class="recipe-result-row">' +
-        '<img class="recipe-result-thumb" src="' + escapeHtml(meal.strMealThumb || '') + '" alt="" loading="lazy">' +
-        '<span class="recipe-result-name">' + escapeHtml(meal.strMeal) + '</span>' +
+        '<img class="recipe-result-thumb clickable-thumb" src="' + escapeHtml(meal.strMealThumb || '') + '" alt="" loading="lazy" data-preview-meal="' + escapeHtml(meal.idMeal) + '">' +
+        '<span class="recipe-result-name clickable-name" data-preview-meal="' + escapeHtml(meal.idMeal) + '">' + escapeHtml(meal.strMeal) + '</span>' +
         '<button class="recipe-add-btn-sm" data-quickadd-meal="' + escapeHtml(meal.idMeal) + '" title="Add ingredients to your shopping list without saving">+ Add to list</button>' +
         '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" data-save-meal="' + escapeHtml(meal.idMeal) + '">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
       '</div>';
