@@ -211,6 +211,18 @@
   }
   .budget-edit-row button:last-child{ background:#fff; border:1px solid var(--line) !important; color:var(--ink-soft); }
 
+  .time-estimate{ margin:8px 26px 0; font-size:11px; color:var(--muted); }
+
+  .usual-chips{ display:none; flex-wrap:wrap; gap:6px; align-items:center; margin-top:14px; max-width:320px; justify-content:center; }
+  .usual-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; width:100%; text-align:center; margin-bottom:2px; }
+  .usual-chip{
+    background:#fff; border:1px solid var(--line); border-radius:14px; font-size:11.5px;
+    padding:5px 12px; cursor:pointer; color:var(--ink-soft); font-family:'Inter',sans-serif;
+  }
+  .usual-chip:hover{ border-color:var(--pink); color:var(--pink-deep); }
+
+  .budget-alert{ background:rgba(255,77,109,0.1); border-color:var(--pink); }
+
   .list{ padding:10px 26px 26px; }
   .empty-state{ text-align:center; padding:30px 10px 16px; color:var(--muted); }
   .empty-state svg{ width:36px; height:36px; opacity:0.35; margin-bottom:10px; }
@@ -389,11 +401,13 @@
         <button id="manualAdd">Add</button>
       </div>
       <div class="support-warning" id="supportWarning" style="display:none;"></div>
+      <div class="usual-chips" id="usualChips" style="display:none;"></div>
     </div>
 
     <div class="list-header">
       <h2>Your list</h2>
       <div class="list-header-actions">
+        <button class="recheck-btn" id="readAloudBtn">🔊 read list aloud</button>
         <button class="recheck-btn" id="pickCheapestAll">pick cheapest for all</button>
         <button class="recheck-btn" id="recheckAll">recheck prices</button>
         <button class="aisle-toggle" id="aisleToggle">shop order</button>
@@ -417,16 +431,18 @@
       <button id="budgetSaveBtn">Save</button>
       <button id="budgetClearBtn">Clear</button>
     </div>
+    <div class="time-estimate" id="timeEstimateRow" style="display:none;"></div>
     <div class="list" id="list"></div>
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.7.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.8.0</span></footer>
 </div>
 
 <script>
 (function(){
   const LIST_KEY = 'blurt:items';
   const SETTINGS_KEY = 'blurt:settings';
+  const USUAL_KEY = 'blurt:usual';
   const PRICE_EPSILON = 0.005;
 
   // Each item: {
@@ -438,6 +454,7 @@
   var items = [];
   var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '', lat: null, lon: null, locationId: null, locationLabel: '', budget: null };
   var shopOrderMode = false;
+  var usualItems = {}; // lowercase query -> { count, label, lastAdded }
 
   function fmt(n){ return '$' + Number(n).toFixed(2); }
   function escapeHtml(s){
@@ -477,6 +494,9 @@
   function saveSettings(){
     try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
   }
+  function saveUsualItems(){
+    try{ localStorage.setItem(USUAL_KEY, JSON.stringify(usualItems)); }catch(e){}
+  }
   function loadAll(){
     try{
       var raw = localStorage.getItem(LIST_KEY);
@@ -487,6 +507,10 @@
       if(rawSettings){
         try{ settings = Object.assign(settings, JSON.parse(rawSettings)); }catch(e){}
       }
+    }catch(e){}
+    try{
+      var rawUsual = localStorage.getItem(USUAL_KEY);
+      if(rawUsual){ try{ usualItems = JSON.parse(rawUsual); }catch(e){ usualItems = {}; } }
     }catch(e){}
     document.getElementById('backendUrl').value = settings.backendUrl || '';
     updateLocationDisplay();
@@ -499,6 +523,28 @@
         setTimeout(function(){ recheckPrice(it.id, true); }, idx * 500);
       });
     }
+  }
+
+  // Items you add often, surfaced as quick-add chips and mentioned when you
+  // ask Blurt to read your list back to you.
+  function recordUsualItem(query){
+    var key = query.toLowerCase();
+    var existing = usualItems[key] || { count: 0, label: query, lastAdded: 0 };
+    existing.count += 1;
+    existing.label = query;
+    existing.lastAdded = Date.now();
+    usualItems[key] = existing;
+    saveUsualItems();
+  }
+
+  function getUsualSuggestions(limit){
+    var onListKeys = {};
+    items.forEach(function(i){ onListKeys[i.query.toLowerCase()] = true; });
+    var candidates = Object.keys(usualItems)
+      .map(function(k){ return usualItems[k]; })
+      .filter(function(u){ return u.count >= 2 && !onListKeys[u.label.toLowerCase()]; })
+      .sort(function(a,b){ return b.count - a.count || b.lastAdded - a.lastAdded; });
+    return candidates.slice(0, limit || 5);
   }
 
   function updateLocationDisplay(){
@@ -703,9 +749,11 @@
         status: isConfigured() ? 'loading' : 'needs-setup',
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
-        betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null
+        betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
+        budgetNotice: null
       };
       items.unshift(item);
+      recordUsualItem(q);
       if(item.status === 'loading') fetchOptions(item.id);
     });
     render(); saveList();
@@ -802,6 +850,12 @@
     it.betterPriceAvailable = false;
     saveList(); render();
   }
+  function dismissBudgetNotice(id){
+    var it = items.find(function(i){ return i.id === id; });
+    if(!it) return;
+    it.budgetNotice = null;
+    saveList(); render();
+  }
 
   function sortedOptions(it){
     if(!it.results) return [];
@@ -813,11 +867,51 @@
     return copy;
   }
 
+  function computeResolvedTotal(){
+    return items.filter(function(i){ return i.status === 'resolved'; }).reduce(function(sum,i){
+      var p = selectedProduct(i);
+      var price = p ? (p.promoPrice || p.regularPrice) : 0;
+      return sum + price * i.qty;
+    }, 0);
+  }
+
+  function estimateShopTime(resolvedItems){
+    var aisles = {};
+    resolvedItems.forEach(function(it){
+      var p = selectedProduct(it);
+      if(p && p.aisleNumber) aisles[p.aisleNumber] = true;
+    });
+    var aisleCount = Object.keys(aisles).length;
+    var base = 6; // parking + checkout baseline
+    var minutes = base + resolvedItems.length * 0.8 + aisleCount * 1.6;
+    return { minutes: Math.round(minutes), aisleCount: aisleCount };
+  }
+
+  function renderUsualChips(){
+    var container = document.getElementById('usualChips');
+    var suggestions = getUsualSuggestions(5);
+    if(suggestions.length === 0){
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+    container.style.display = 'flex';
+    container.innerHTML = '<span class="usual-label">you usually get:</span>' + suggestions.map(function(u){
+      return '<button class="usual-chip" data-usual="' + escapeHtml(u.label) + '">' + escapeHtml(u.label) + '</button>';
+    }).join('');
+    container.querySelectorAll('[data-usual]').forEach(function(btn){
+      btn.addEventListener('click', function(){ addItems(btn.getAttribute('data-usual')); });
+    });
+  }
+
   function selectOption(id, productId){
     var it = items.find(function(i){ return i.id === id; });
     if(!it || !it.results) return;
     var product = it.results.find(function(p){ return p.productId === productId; });
     if(!product) return;
+
+    var prevTotal = computeResolvedTotal();
+
     it.selectedProductId = productId;
     it.priceAtSelection = product.promoPrice || product.regularPrice;
     it.status = 'resolved';
@@ -825,6 +919,17 @@
     it.betterPriceAvailable = false;
     it.dismissedBetterPrice = null;
     if(!it.qty) it.qty = 1;
+
+    // Gentle nudge: only fires the moment a pick actually crosses you over
+    // budget — not every time you're already over it.
+    it.budgetNotice = null;
+    if(settings.budget !== null && settings.budget !== undefined){
+      var newTotal = computeResolvedTotal();
+      if(prevTotal <= settings.budget + PRICE_EPSILON && newTotal > settings.budget + PRICE_EPSILON){
+        it.budgetNotice = 'This puts you ' + fmt(newTotal - settings.budget) + ' over your ' + fmt(settings.budget) + ' budget.';
+      }
+    }
+
     render(); saveList();
   }
 
@@ -876,6 +981,7 @@
     });
   }
   document.getElementById('pickCheapestAll').addEventListener('click', pickCheapestForAll);
+  document.getElementById('readAloudBtn').addEventListener('click', speakSummary);
 
   // ---------- Budget cap ----------
   var budgetEditRow = document.getElementById('budgetEditRow');
@@ -906,13 +1012,11 @@
     if(resolved.length === 0){
       text = 'Your list is empty right now.';
     } else {
-      var totalItems = resolved.reduce(function(sum,i){ return sum + i.qty; }, 0);
-      var totalPrice = resolved.reduce(function(sum,i){
-        var p = selectedProduct(i);
-        var price = p ? (p.promoPrice || p.regularPrice) : 0;
-        return sum + price * i.qty;
-      }, 0);
-      text = 'You have ' + totalItems + (totalItems===1?' item':' items') + ' on your list, totaling ' + fmt(totalPrice) + '.';
+      var totalPrice = computeResolvedTotal();
+      var names = resolved.map(function(i){ return i.query; });
+      var namesText = names.length === 1 ? names[0]
+        : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
+      text = 'Your list: ' + namesText + '. Total is ' + fmt(totalPrice) + '.';
       if(settings.budget !== null && settings.budget !== undefined){
         var remaining = settings.budget - totalPrice;
         text += remaining < 0
@@ -920,6 +1024,17 @@
           : ' You have ' + fmt(remaining) + ' left in your budget.';
       }
     }
+
+    // Gently mention regulars that aren't on the list this time, same data
+    // source as the quick-add chips.
+    var missing = getUsualSuggestions(3);
+    if(missing.length > 0){
+      var missingNames = missing.map(function(u){ return u.label; });
+      var missingText = missingNames.length === 1 ? missingNames[0]
+        : missingNames.slice(0, -1).join(', ') + ', and ' + missingNames[missingNames.length - 1];
+      text += ' You usually also get ' + missingText + ' — want to add ' + (missingNames.length === 1 ? 'it' : 'them') + '?';
+    }
+
     try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }catch(e){}
   }
 
@@ -1033,11 +1148,19 @@
 
     var alertHtml = '';
     if(it.betterPriceAvailable && it.betterPrice !== null){
-      alertHtml = '<div class="price-alert">' +
+      alertHtml += '<div class="price-alert">' +
         '<span>Better price found — now ' + fmt(it.betterPrice) + '</span>' +
         '<div class="price-alert-actions">' +
           '<button class="use-price-btn" data-apply-better="' + it.id + '">use it</button>' +
           '<button class="dismiss-price-btn" data-dismiss-better="' + it.id + '">dismiss</button>' +
+        '</div>' +
+      '</div>';
+    }
+    if(it.budgetNotice){
+      alertHtml += '<div class="price-alert budget-alert">' +
+        '<span>' + escapeHtml(it.budgetNotice) + '</span>' +
+        '<div class="price-alert-actions">' +
+          '<button class="dismiss-price-btn" data-dismiss-budget="' + it.id + '">got it</button>' +
         '</div>' +
       '</div>';
     }
@@ -1082,11 +1205,7 @@
 
     var resolvedItems = items.filter(function(i){ return i.status === 'resolved'; });
     var totalItems = resolvedItems.reduce(function(sum,i){ return sum + i.qty; }, 0);
-    var totalPrice = resolvedItems.reduce(function(sum,i){
-      var p = selectedProduct(i);
-      var price = p ? (p.promoPrice || p.regularPrice) : 0;
-      return sum + price * i.qty;
-    }, 0);
+    var totalPrice = computeResolvedTotal();
     var pickedCount = resolvedItems.filter(function(i){ return i.picked; }).length;
     var pendingCount = items.length - resolvedItems.length;
     var betterCount = resolvedItems.filter(function(i){ return i.betterPriceAvailable; }).length;
@@ -1115,6 +1234,18 @@
       budgetText.className = 'budget-text';
       budgetText.textContent = 'no budget set';
     }
+
+    var timeRow = document.getElementById('timeEstimateRow');
+    if(resolvedItems.length > 0){
+      var estimate = estimateShopTime(resolvedItems);
+      timeRow.style.display = 'block';
+      timeRow.textContent = '🕐 Est. shop time: ~' + estimate.minutes + ' min' +
+        (estimate.aisleCount > 0 ? ' · ' + estimate.aisleCount + ' aisle' + (estimate.aisleCount===1?'':'s') : ' (rough estimate)');
+    } else {
+      timeRow.style.display = 'none';
+    }
+
+    renderUsualChips();
 
     if(items.length === 0){
       listEl.innerHTML = '<div class="empty-state">' +
@@ -1149,6 +1280,7 @@
     listEl.querySelectorAll('[data-qty-plus]').forEach(function(btn){ btn.addEventListener('click', function(){ changeQty(btn.getAttribute('data-qty-plus'), 1); }); });
     listEl.querySelectorAll('[data-apply-better]').forEach(function(btn){ btn.addEventListener('click', function(){ applyBetterPrice(btn.getAttribute('data-apply-better')); }); });
     listEl.querySelectorAll('[data-dismiss-better]').forEach(function(btn){ btn.addEventListener('click', function(){ dismissBetterPrice(btn.getAttribute('data-dismiss-better')); }); });
+    listEl.querySelectorAll('[data-dismiss-budget]').forEach(function(btn){ btn.addEventListener('click', function(){ dismissBudgetNotice(btn.getAttribute('data-dismiss-budget')); }); });
     listEl.querySelectorAll('[data-select]').forEach(function(btn){ btn.addEventListener('click', function(){
       var parts = btn.getAttribute('data-select').split('|');
       selectOption(parts[0], parts[1]);
