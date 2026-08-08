@@ -180,9 +180,12 @@
   .list-header{ padding:16px 26px 4px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
   .list-header h2{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin:0; font-weight:600; }
   .list-header-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .clear-btn, .aisle-toggle, .recheck-btn{ background:none; border:none; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
-  .clear-btn:hover, .aisle-toggle:hover, .recheck-btn:hover{ color:var(--pink-deep); }
-  .aisle-toggle.active{ color:var(--green); font-weight:600; text-decoration:none; }
+  .clear-btn, .recheck-btn{ background:none; border:none; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
+  .clear-btn:hover, .recheck-btn:hover{ color:var(--pink-deep); }
+  .sort-select{
+    font-size:11px; color:var(--ink-soft); background:#fff; border:1px solid var(--line);
+    border-radius:10px; padding:3px 6px; font-family:'Inter',sans-serif; cursor:pointer;
+  }
 
   .total-bar{
     margin:10px 26px 4px; padding:12px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
@@ -241,6 +244,13 @@
   .item-card.picked .item-query{ text-decoration:line-through; color:var(--muted); }
   .pick-btn-spacer{ width:20px; flex-shrink:0; }
   .item-query{ flex:1; font-size:14.5px; font-weight:600; }
+  .item-query.editable{ cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; color:var(--pink-deep); }
+  .item-query.editable:hover{ color:var(--pink); }
+  .item-query-edit{
+    flex:1; font-size:14.5px; font-weight:600; padding:4px 8px; border-radius:6px;
+    border:1px solid var(--pink); font-family:'Inter',sans-serif; color:var(--ink);
+  }
+  .item-query-edit:focus{ outline:2px solid var(--pink); outline-offset:1px; }
   .remove-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
   .remove-btn:hover{ color:var(--pink-deep); }
 
@@ -348,6 +358,7 @@
     background:var(--ink); color:var(--paper); border:none; border-radius:8px;
     padding:0 16px; font-size:13px; font-weight:600; cursor:pointer;
   }
+  .recipe-clear-btn{ background:#fff !important; border:1px solid var(--line) !important; color:var(--ink-soft) !important; }
   .manual-recipe-row{ display:none; flex-direction:column; gap:8px; margin-top:12px; }
   .manual-recipe-row.open{ display:flex; }
   .manual-recipe-row input, .manual-recipe-row textarea{
@@ -375,15 +386,29 @@
   .recipe-save-btn.saved{ background:var(--green); }
 
   .recipe-list{ padding:10px 26px 26px; }
-  .recipe-card{ padding:16px 0; border-bottom:1px dashed var(--line); }
+  .recipe-filter-bar{ display:flex; gap:6px; }
+  .recipe-filter-btn{
+    background:#fff; border:1px solid var(--line); border-radius:12px; font-size:10.5px;
+    padding:3px 10px; cursor:pointer; color:var(--muted); font-family:'IBM Plex Mono',monospace;
+  }
+  .recipe-filter-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .recipe-card{ padding:14px 0; border-bottom:1px dashed var(--line); }
   .recipe-card:last-child{ border-bottom:none; }
-  .recipe-card-head{ display:flex; align-items:flex-start; gap:12px; }
-  .recipe-card-thumb{ width:56px; height:56px; border-radius:9px; object-fit:cover; flex-shrink:0; background:var(--paper-dim); }
-  .recipe-card-title{ flex:1; }
-  .recipe-card-name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; color:var(--ink); }
-  .recipe-card-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
-  .recipe-remove-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
+  .recipe-card-head{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .recipe-card-thumb{ width:44px; height:44px; border-radius:9px; object-fit:cover; flex-shrink:0; background:var(--paper-dim); }
+  .recipe-card-title{ flex:1; min-width:0; }
+  .recipe-card-name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
+  .recipe-card-meta{ font-size:10.5px; color:var(--muted); margin-top:2px; display:flex; gap:6px; align-items:center; }
+  .recipe-type-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.03em;
+    background:var(--paper-dim); border-radius:4px; padding:1px 5px;
+  }
+  .recipe-chevron{ color:var(--muted); font-size:12px; transition:transform 0.15s ease; flex-shrink:0; }
+  .recipe-card.expanded .recipe-chevron{ transform:rotate(90deg); }
+  .recipe-remove-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; flex-shrink:0; }
   .recipe-remove-btn:hover{ color:var(--pink-deep); }
+  .recipe-card-body{ display:none; }
+  .recipe-card.expanded .recipe-card-body{ display:block; }
   .recipe-ingredients{ margin:12px 0 0; padding-left:2px; list-style:none; }
   .recipe-ingredients li{
     font-size:12.5px; color:var(--ink-soft); padding:4px 0; border-bottom:1px dashed var(--line);
@@ -446,7 +471,8 @@
 
     <div class="tab-bar">
       <button class="tab-btn active" id="tabShopBtn" data-tab="shop">🛒 Shop</button>
-      <button class="tab-btn" id="tabRecipesBtn" data-tab="recipes">📖 Recipes & Lists</button>
+      <button class="tab-btn" id="tabSearchBtn" data-tab="search">🔍 Recipe Search</button>
+      <button class="tab-btn" id="tabSavedBtn" data-tab="saved">📖 Saved Recipes &amp; Lists</button>
     </div>
 
     <div id="shopSection">
@@ -488,7 +514,14 @@
         <button class="recheck-btn" id="readAloudBtn">🔊 read list aloud</button>
         <button class="recheck-btn" id="pickCheapestAll">pick cheapest for all</button>
         <button class="recheck-btn" id="recheckAll">recheck prices</button>
-        <button class="aisle-toggle" id="aisleToggle">shop order</button>
+        <select class="sort-select" id="sortModeSelect">
+          <option value="added">Sort: order added</option>
+          <option value="aisle">Sort: aisle</option>
+          <option value="category">Sort: category</option>
+          <option value="alpha">Sort: A–Z</option>
+          <option value="price-asc">Sort: price low→high</option>
+          <option value="price-desc">Sort: price high→low</option>
+        </select>
         <button class="clear-btn" id="clearPicked">clear picked up</button>
         <button class="clear-btn" id="resetListBtn">reset list</button>
       </div>
@@ -513,32 +546,43 @@
     <div class="list" id="list"></div>
     </div>
 
-    <div id="recipesSection" style="display:none;">
+    <div id="recipeSearchSection" style="display:none;">
       <div class="recipe-search-zone">
         <div class="recipe-search-row">
           <input type="text" id="recipeSearchInput" placeholder="Search a recipe, e.g. lasagna" maxlength="80">
           <button id="recipeSearchBtn">Search</button>
+          <button class="recipe-clear-btn" id="recipeSearchClear">Clear</button>
         </div>
-        <button class="manual-toggle" id="manualRecipeToggle">or build a list from scratch</button>
+        <div class="recipe-search-status" id="recipeSearchStatus"></div>
+        <div class="recipe-search-results" id="recipeSearchResults"></div>
+      </div>
+    </div>
+
+    <div id="savedListsSection" style="display:none;">
+      <div class="recipe-search-zone">
+        <button class="manual-toggle" id="manualRecipeToggle">+ build a list from scratch</button>
         <div class="manual-recipe-row" id="manualRecipeRow">
           <input type="text" id="manualRecipeName" placeholder="List or recipe name" maxlength="80">
           <textarea id="manualRecipeIngredients" placeholder="One ingredient per line&#10;e.g.&#10;2 cups flour&#10;1 tsp salt&#10;3 eggs" rows="4"></textarea>
           <input type="text" id="manualRecipeLink" placeholder="Optional link (e.g. the recipe you're following)" maxlength="300">
           <button id="manualRecipeSave">Save list</button>
         </div>
-        <div class="recipe-search-status" id="recipeSearchStatus"></div>
-        <div class="recipe-search-results" id="recipeSearchResults"></div>
       </div>
 
       <div class="list-header">
         <h2>Saved recipes &amp; lists</h2>
+        <div class="recipe-filter-bar">
+          <button class="recipe-filter-btn active" id="filterAllBtn" data-filter="all">All</button>
+          <button class="recipe-filter-btn" id="filterRecipesBtn" data-filter="recipe">Recipes</button>
+          <button class="recipe-filter-btn" id="filterListsBtn" data-filter="list">Lists</button>
+        </div>
       </div>
       <div class="recipe-list" id="recipeList"></div>
     </div>
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.9.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.0.0</span></footer>
 </div>
 
 <script>
@@ -558,11 +602,13 @@
   // }
   var items = [];
   var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '', lat: null, lon: null, locationId: null, locationLabel: '', budget: null };
-  var shopOrderMode = false;
+  var sortMode = 'added'; // 'added' | 'aisle' | 'category' | 'alpha' | 'price-asc' | 'price-desc'
   var usualItems = {}; // lowercase query -> { count, label, lastAdded }
   var recipes = []; // { id, name, ingredients: [string,...], sourceUrl, thumbnail, createdAt }
   var recipeSearchResults = [];
   var activeTab = 'shop';
+  var recipeFilter = 'all'; // 'all' | 'recipe' | 'list'
+  var expandedRecipeIds = {}; // runtime-only UI state, not persisted
 
   function fmt(n){ return '$' + Number(n).toFixed(2); }
   function escapeHtml(s){
@@ -581,6 +627,12 @@
     var parts = t.split(/\s*,\s*|\s+and\s+|\s*&\s*/i);
     var out = [];
     parts.forEach(function(p){
+      p = p.trim();
+      // Strip a leading article per-item too, not just once for the whole
+      // sentence — "milk and a toothbrush" only had the article on segment 2.
+      // Kroger's search matches better on the bare noun ("toothbrush") than
+      // on a phrase that includes "a" as if it were part of the product name.
+      p = p.replace(/^(a|an|the)\s+/i, '');
       p = p.trim();
       if(p){ out.push(p.charAt(0).toUpperCase() + p.slice(1)); }
     });
@@ -863,7 +915,7 @@
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
         betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null
+        budgetNotice: null, editingName: false
       };
       items.unshift(item);
       recordUsualItem(q);
@@ -1173,11 +1225,8 @@
     return false;
   }
 
-  var aisleToggleBtn = document.getElementById('aisleToggle');
-  aisleToggleBtn.addEventListener('click', function(){
-    shopOrderMode = !shopOrderMode;
-    aisleToggleBtn.classList.toggle('active', shopOrderMode);
-    aisleToggleBtn.textContent = shopOrderMode ? 'shop order ✓' : 'shop order';
+  document.getElementById('sortModeSelect').addEventListener('change', function(e){
+    sortMode = e.target.value;
     render();
   });
 
@@ -1248,7 +1297,12 @@
     }
     if(it.status === 'error'){
       return '<div class="search-error">Could not fetch prices: ' + escapeHtml(it.errorMsg) + '</div>' +
-        '<button class="retry-btn" data-retry="' + it.id + '">try again</button>';
+        '<button class="retry-btn" data-retry="' + it.id + '">try again</button>' +
+        '<div class="search-status" style="margin-top:6px;">tip: tap the item name above to fix a typo and search again</div>';
+    }
+    if(it.status === 'choosing' && (!it.results || it.results.length === 0)){
+      return optionsBlockHtml(it) +
+        '<div class="search-status" style="margin-top:6px;">tip: tap the item name above to try a different spelling</div>';
     }
     if(it.status === 'choosing' || (it.status === 'resolved' && it.expanded)){
       return optionsBlockHtml(it);
@@ -1296,16 +1350,31 @@
   }
 
   function displayOrder(){
-    if(!shopOrderMode) return items.slice();
+    if(sortMode === 'added') return items.slice();
     var unresolved = items.filter(function(i){ return i.status !== 'resolved'; });
     var resolved = items.filter(function(i){ return i.status === 'resolved'; });
+
+    function aisleOf(it){
+      var p = selectedProduct(it);
+      var n = (p && p.aisleNumber) ? parseInt(p.aisleNumber, 10) : NaN;
+      return isNaN(n) ? 9999 : n;
+    }
+    function categoryOf(it){
+      var p = selectedProduct(it);
+      return (p && p.category) ? p.category.toLowerCase() : 'zzzz';
+    }
+    function priceOf(it){
+      var p = selectedProduct(it);
+      return p ? (p.promoPrice || p.regularPrice) : 0;
+    }
+
     resolved.sort(function(a,b){
-      var pa = selectedProduct(a), pb = selectedProduct(b);
-      var aa = (pa && pa.aisleNumber) ? parseInt(pa.aisleNumber, 10) : 9999;
-      var bb = (pb && pb.aisleNumber) ? parseInt(pb.aisleNumber, 10) : 9999;
-      if(isNaN(aa)) aa = 9999;
-      if(isNaN(bb)) bb = 9999;
-      return aa - bb;
+      if(sortMode === 'aisle') return aisleOf(a) - aisleOf(b);
+      if(sortMode === 'category') return categoryOf(a) < categoryOf(b) ? -1 : (categoryOf(a) > categoryOf(b) ? 1 : 0);
+      if(sortMode === 'alpha') return a.query.toLowerCase() < b.query.toLowerCase() ? -1 : (a.query.toLowerCase() > b.query.toLowerCase() ? 1 : 0);
+      if(sortMode === 'price-asc') return priceOf(a) - priceOf(b);
+      if(sortMode === 'price-desc') return priceOf(b) - priceOf(a);
+      return 0;
     });
     return unresolved.concat(resolved);
   }
@@ -1373,15 +1442,54 @@
       var headActions = canPick
         ? '<button class="pick-btn" data-pick="' + it.id + '">' + iconCheck() + '</button>'
         : '<span class="pick-btn-spacer"></span>';
+
+      var isEmptyChoosing = it.status === 'choosing' && (!it.results || it.results.length === 0);
+      var editable = it.status === 'error' || isEmptyChoosing;
+
+      var nameHtml;
+      if(it.editingName){
+        nameHtml = '<input type="text" class="item-query-edit" data-edit-input="' + it.id + '" value="' + escapeHtml(it.query) + '" maxlength="80">';
+      } else if(editable){
+        nameHtml = '<span class="item-query editable" data-click-edit="' + it.id + '" title="Tap to fix the spelling and search again">' + escapeHtml(it.query) + ' ✎</span>';
+      } else {
+        nameHtml = '<span class="item-query">' + escapeHtml(it.query) + '</span>';
+      }
+
       return '<div class="item-card' + (it.picked ? ' picked' : '') + '">' +
         '<div class="item-card-head">' +
           headActions +
-          '<span class="item-query">' + escapeHtml(it.query) + '</span>' +
+          nameHtml +
           '<button class="remove-btn" data-remove="' + it.id + '">×</button>' +
         '</div>' +
         '<div class="item-body">' + itemBodyHtml(it) + '</div>' +
       '</div>';
     }).join('');
+
+    listEl.querySelectorAll('[data-click-edit]').forEach(function(btn){ btn.addEventListener('click', function(){
+      var it = items.find(function(i){ return i.id === btn.getAttribute('data-click-edit'); });
+      if(it){ it.editingName = true; render();
+        var input = listEl.querySelector('[data-edit-input="' + it.id + '"]');
+        if(input){ input.focus(); input.select(); }
+      }
+    }); });
+    listEl.querySelectorAll('[data-edit-input]').forEach(function(input){
+      var commit = function(){
+        var it = items.find(function(i){ return i.id === input.getAttribute('data-edit-input'); });
+        if(!it) return;
+        var newQuery = input.value.trim();
+        it.editingName = false;
+        if(newQuery && newQuery !== it.query){
+          it.query = newQuery;
+          it.status = isConfigured() ? 'loading' : 'needs-setup';
+          saveList(); render();
+          if(it.status === 'loading') fetchOptions(it.id);
+        } else {
+          render();
+        }
+      };
+      input.addEventListener('keydown', function(e){ if(e.key === 'Enter') commit(); });
+      input.addEventListener('blur', commit);
+    });
 
     listEl.querySelectorAll('[data-pick]').forEach(function(btn){ btn.addEventListener('click', function(){ togglePicked(btn.getAttribute('data-pick')); }); });
     listEl.querySelectorAll('[data-remove]').forEach(function(btn){ btn.addEventListener('click', function(){ removeItem(btn.getAttribute('data-remove')); }); });
@@ -1471,12 +1579,15 @@
   function setActiveTab(tab){
     activeTab = tab;
     document.getElementById('shopSection').style.display = tab === 'shop' ? 'block' : 'none';
-    document.getElementById('recipesSection').style.display = tab === 'recipes' ? 'block' : 'none';
+    document.getElementById('recipeSearchSection').style.display = tab === 'search' ? 'block' : 'none';
+    document.getElementById('savedListsSection').style.display = tab === 'saved' ? 'block' : 'none';
     document.getElementById('tabShopBtn').classList.toggle('active', tab === 'shop');
-    document.getElementById('tabRecipesBtn').classList.toggle('active', tab === 'recipes');
+    document.getElementById('tabSearchBtn').classList.toggle('active', tab === 'search');
+    document.getElementById('tabSavedBtn').classList.toggle('active', tab === 'saved');
   }
   document.getElementById('tabShopBtn').addEventListener('click', function(){ setActiveTab('shop'); });
-  document.getElementById('tabRecipesBtn').addEventListener('click', function(){ setActiveTab('recipes'); });
+  document.getElementById('tabSearchBtn').addEventListener('click', function(){ setActiveTab('search'); });
+  document.getElementById('tabSavedBtn').addEventListener('click', function(){ setActiveTab('saved'); });
 
   // ---------- Recipes & Lists ----------
   function saveRecipes(){
@@ -1492,17 +1603,35 @@
     t = t.replace(unitPattern, '');
     t = t.trim();
     if(!t) t = line.trim();
+    t = t.replace(/^(a|an|the)\s+/i, '');
+    return cleanIngredientName(t);
+  }
+
+  // Strips parenthetical asides ("(chopped)", "(optional)") and tidies
+  // whitespace/capitalization — used for the actual Kroger search term,
+  // kept separate from the full display text shown in the recipe card.
+  function cleanIngredientName(name){
+    var t = name.replace(/\([^)]*\)/g, '').trim();
+    t = t.replace(/\s{2,}/g, ' ').trim();
+    if(!t) t = name.trim();
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
 
+  // Each ingredient is stored as { display, searchTerm }: `display` is the
+  // full human-readable line shown in the card ("Juice of 2 Limes"),
+  // `searchTerm` is what actually gets searched against Kroger. For
+  // TheMealDB recipes we use its separate ingredient-name field directly
+  // rather than trying to regex-strip a combined "measure + name" string —
+  // that combined text varies too much ("Juice of 2", "A pinch of", "to
+  // taste") for any regex to reliably parse back apart.
   function extractMealIngredients(meal){
     var list = [];
     for(var i = 1; i <= 20; i++){
       var ing = meal['strIngredient' + i];
       var measure = meal['strMeasure' + i];
       if(ing && ing.trim()){
-        var line = (measure && measure.trim() ? measure.trim() + ' ' : '') + ing.trim();
-        list.push(line);
+        var display = (measure && measure.trim() ? measure.trim() + ' ' : '') + ing.trim();
+        list.push({ display: display, searchTerm: cleanIngredientName(ing) });
       }
     }
     return list;
@@ -1532,6 +1661,12 @@
   }
   document.getElementById('recipeSearchBtn').addEventListener('click', searchRecipes);
   document.getElementById('recipeSearchInput').addEventListener('keydown', function(e){ if(e.key === 'Enter') searchRecipes(); });
+  document.getElementById('recipeSearchClear').addEventListener('click', function(){
+    document.getElementById('recipeSearchInput').value = '';
+    document.getElementById('recipeSearchStatus').textContent = '';
+    document.getElementById('recipeSearchResults').innerHTML = '';
+    recipeSearchResults = [];
+  });
 
   function renderRecipeSearchResults(){
     var resultsEl = document.getElementById('recipeSearchResults');
@@ -1555,6 +1690,7 @@
     recipes.unshift({
       id: 'r' + Date.now() + Math.random().toString(36).slice(2,7),
       sourceId: meal.idMeal,
+      type: 'recipe',
       name: meal.strMeal,
       ingredients: extractMealIngredients(meal),
       sourceUrl: sourceUrl,
@@ -1577,11 +1713,13 @@
     var rawIngredients = document.getElementById('manualRecipeIngredients').value;
     var link = document.getElementById('manualRecipeLink').value.trim();
     if(!name){ document.getElementById('manualRecipeName').focus(); return; }
-    var ingredients = rawIngredients.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+    var ingredients = rawIngredients.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; })
+      .map(function(l){ return { display: l, searchTerm: stripLeadingMeasure(l) }; });
     if(ingredients.length === 0){ document.getElementById('manualRecipeIngredients').focus(); return; }
     recipes.unshift({
       id: 'r' + Date.now() + Math.random().toString(36).slice(2,7),
       sourceId: null,
+      type: link ? 'recipe' : 'list',
       name: name,
       ingredients: ingredients,
       sourceUrl: link || null,
@@ -1606,8 +1744,8 @@
   function addRecipeToShoppingList(id){
     var recipe = recipes.find(function(r){ return r.id === id; });
     if(!recipe) return;
-    var cleaned = recipe.ingredients.map(stripLeadingMeasure);
-    cleaned.forEach(function(name){
+    recipe.ingredients.forEach(function(ing){
+      var name = ing.searchTerm;
       var item = {
         id: 'i'+Date.now()+Math.random().toString(36).slice(2,7),
         query: name,
@@ -1615,7 +1753,7 @@
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
         betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null
+        budgetNotice: null, editingName: false
       };
       items.unshift(item);
       recordUsualItem(name);
@@ -1625,39 +1763,87 @@
     setActiveTab('shop');
   }
 
+  function toggleRecipeExpanded(id){
+    expandedRecipeIds[id] = !expandedRecipeIds[id];
+    renderRecipeList();
+  }
+
   function renderRecipeList(){
     var listEl = document.getElementById('recipeList');
+    var visible = recipes.filter(function(r){
+      if(recipeFilter === 'all') return true;
+      return (r.type || 'list') === recipeFilter;
+    });
+
     if(recipes.length === 0){
-      listEl.innerHTML = '<div class="recipe-empty">No saved recipes or lists yet.<br>Search above, or build one from scratch.</div>';
+      listEl.innerHTML = '<div class="recipe-empty">No saved recipes or lists yet.<br>Search a recipe, or build a list from scratch.</div>';
       return;
     }
-    listEl.innerHTML = recipes.map(function(r){
-      var thumbHtml = r.thumbnail ? '<img class="recipe-card-thumb" src="' + escapeHtml(r.thumbnail) + '" alt="">' : '';
+    if(visible.length === 0){
+      listEl.innerHTML = '<div class="recipe-empty">Nothing in this filter yet.</div>';
+      return;
+    }
+
+    listEl.innerHTML = visible.map(function(r){
+      var isExpanded = !!expandedRecipeIds[r.id];
+      var type = r.type || 'list';
+      var thumbHtml = r.thumbnail ? '<img class="recipe-card-thumb" src="' + escapeHtml(r.thumbnail) + '" alt="" onerror="this.style.display=\'none\'">' : '';
       var linkHtml = r.sourceUrl ? '<a class="recipe-link" href="' + escapeHtml(r.sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(r.sourceLabel || 'View link') + ' →</a>' : '';
-      return '<div class="recipe-card">' +
-        '<div class="recipe-card-head">' +
+      var ingredientsHtml = r.ingredients.map(function(ing){
+        return '<li>' + escapeHtml(ing.display) + '</li>';
+      }).join('');
+
+      return '<div class="recipe-card' + (isExpanded ? ' expanded' : '') + '">' +
+        '<div class="recipe-card-head" data-toggle-recipe="' + r.id + '">' +
+          '<span class="recipe-chevron">▶</span>' +
           thumbHtml +
           '<div class="recipe-card-title">' +
             '<div class="recipe-card-name">' + escapeHtml(r.name) + '</div>' +
-            '<div class="recipe-card-meta">' + r.ingredients.length + ' ingredient' + (r.ingredients.length===1?'':'s') + '</div>' +
+            '<div class="recipe-card-meta">' +
+              '<span class="recipe-type-tag">' + (type === 'recipe' ? 'recipe' : 'list') + '</span>' +
+              '<span>' + r.ingredients.length + ' ingredient' + (r.ingredients.length===1?'':'s') + '</span>' +
+            '</div>' +
           '</div>' +
           '<button class="recipe-remove-btn" data-remove-recipe="' + r.id + '">×</button>' +
         '</div>' +
-        '<ul class="recipe-ingredients">' + r.ingredients.map(function(ing){ return '<li>' + escapeHtml(ing) + '</li>'; }).join('') + '</ul>' +
-        '<div class="recipe-card-actions">' +
-          '<button class="recipe-add-btn" data-add-recipe="' + r.id + '">Add all to shopping list</button>' +
-          linkHtml +
+        '<div class="recipe-card-body">' +
+          '<ul class="recipe-ingredients">' + ingredientsHtml + '</ul>' +
+          '<div class="recipe-card-actions">' +
+            '<button class="recipe-add-btn" data-add-recipe="' + r.id + '">Add all to shopping list</button>' +
+            linkHtml +
+          '</div>' +
         '</div>' +
       '</div>';
     }).join('');
 
+    listEl.querySelectorAll('[data-toggle-recipe]').forEach(function(head){
+      head.addEventListener('click', function(e){
+        if(e.target.closest('[data-remove-recipe]')) return; // remove button clicks shouldn't also toggle
+        toggleRecipeExpanded(head.getAttribute('data-toggle-recipe'));
+      });
+    });
     listEl.querySelectorAll('[data-remove-recipe]').forEach(function(btn){
-      btn.addEventListener('click', function(){ removeRecipe(btn.getAttribute('data-remove-recipe')); });
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        removeRecipe(btn.getAttribute('data-remove-recipe'));
+      });
     });
     listEl.querySelectorAll('[data-add-recipe]').forEach(function(btn){
-      btn.addEventListener('click', function(){ addRecipeToShoppingList(btn.getAttribute('data-add-recipe')); });
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        addRecipeToShoppingList(btn.getAttribute('data-add-recipe'));
+      });
     });
   }
+
+  ['filterAllBtn','filterRecipesBtn','filterListsBtn'].forEach(function(id){
+    document.getElementById(id).addEventListener('click', function(){
+      recipeFilter = this.getAttribute('data-filter');
+      document.querySelectorAll('.recipe-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+      this.classList.add('active');
+      renderRecipeList();
+    });
+  });
 
   // Speech recognition
   var micBtn = document.getElementById('micBtn');
