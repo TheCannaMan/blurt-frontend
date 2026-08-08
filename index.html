@@ -633,7 +633,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.2.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.2.1</span></footer>
 </div>
 
 <script>
@@ -1285,9 +1285,10 @@
   }
 
   function runRecipeSearchCommand(query){
+    var cleaned = query.trim().replace(/^(a|an|the)\s+/i, '').trim();
     setActiveTab('search');
     var input = document.getElementById('recipeSearchInput');
-    input.value = query;
+    input.value = cleaned;
     searchRecipes();
   }
 
@@ -1818,8 +1819,9 @@
   }
 
   function searchRecipes(){
-    var query = document.getElementById('recipeSearchInput').value.trim();
-    if(!query) return;
+    var raw = document.getElementById('recipeSearchInput').value.trim();
+    if(!raw) return;
+    var query = raw.replace(/^(a|an|the)\s+/i, '').trim();
     var status = document.getElementById('recipeSearchStatus');
     var resultsEl = document.getElementById('recipeSearchResults');
     status.innerHTML = '<span class="spinner"></span> searching…';
