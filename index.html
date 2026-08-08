@@ -224,14 +224,6 @@
 
   .time-estimate{ margin:8px 26px 0; font-size:11px; color:var(--muted); }
 
-  .usual-chips{ display:none; flex-wrap:wrap; gap:6px; align-items:center; margin-top:14px; max-width:320px; justify-content:center; }
-  .usual-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; width:100%; text-align:center; margin-bottom:2px; }
-  .usual-chip{
-    background:#fff; border:1px solid var(--line); border-radius:14px; font-size:11.5px;
-    padding:5px 12px; cursor:pointer; color:var(--ink-soft); font-family:'Inter',sans-serif;
-  }
-  .usual-chip:hover{ border-color:var(--pink); color:var(--pink-deep); }
-
   .budget-alert{ background:rgba(255,77,109,0.1); border-color:var(--pink); }
 
   .list{ padding:10px 26px 26px; }
@@ -596,7 +588,6 @@
         <button id="manualAdd">Add</button>
       </div>
       <div class="support-warning" id="supportWarning" style="display:none;"></div>
-      <div class="usual-chips" id="usualChips" style="display:none;"></div>
     </div>
 
     <div class="list-header">
@@ -682,14 +673,14 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.5.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.6.0</span></footer>
 </div>
 
 <script>
 (function(){
   const LIST_KEY = 'blurt:items';
   const SETTINGS_KEY = 'blurt:settings';
-  const USUAL_KEY = 'blurt:usual';
+  const LOCATION_KEY = 'blurt:location'; // sessionStorage, not localStorage — see note below
   const RECIPES_KEY = 'blurt:recipes';
   const MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1';
   const PRICE_EPSILON = 0.005;
@@ -701,9 +692,15 @@
   //   betterPriceAvailable, betterPrice, betterProductId, dismissedBetterPrice
   // }
   var items = [];
-  var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '', lat: null, lon: null, locationId: null, locationLabel: '', budget: null };
+  var settings = { backendUrl: 'https://blurt-br5e.onrender.com', budget: null };
+  // Location is deliberately NOT part of `settings` / localStorage. Kroger's
+  // Acceptable Use policy for the Locations API prohibits "storing data about
+  // the location of a customer." We hold it in sessionStorage instead, which
+  // clears the moment the tab/browser closes — a defensible middle ground
+  // (mirrors the Cart API's own explicit "terminate on close" language) but
+  // not a guarantee; worth confirming directly with Kroger if certainty matters.
+  var location = { zip: '', lat: null, lon: null, locationId: null, locationLabel: '' };
   var sortMode = 'added'; // 'added' | 'aisle' | 'category' | 'alpha' | 'price-asc' | 'price-desc'
-  var usualItems = {}; // lowercase query -> { count, label, lastAdded }
   var recipes = []; // { id, name, ingredients: [string,...], sourceUrl, thumbnail, createdAt }
   var recipeSearchResults = [];
   var randomMeal = null; // currently-shown "surprise me" pick, if any
@@ -740,12 +737,12 @@
     return out;
   }
 
-  function hasLocation(){ return !!(settings.zip || (settings.lat && settings.lon)); }
+  function hasLocation(){ return !!(location.zip || (location.lat && location.lon)); }
   function isConfigured(){ return !!(settings.backendUrl && hasLocation()); }
 
   function locationQueryPart(){
-    if(settings.zip) return 'zip=' + encodeURIComponent(settings.zip);
-    if(settings.lat && settings.lon) return 'lat=' + encodeURIComponent(settings.lat) + '&lon=' + encodeURIComponent(settings.lon);
+    if(location.zip) return 'zip=' + encodeURIComponent(location.zip);
+    if(location.lat && location.lon) return 'lat=' + encodeURIComponent(location.lat) + '&lon=' + encodeURIComponent(location.lon);
     return '';
   }
 
@@ -755,8 +752,8 @@
   function saveSettings(){
     try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
   }
-  function saveUsualItems(){
-    try{ localStorage.setItem(USUAL_KEY, JSON.stringify(usualItems)); }catch(e){}
+  function saveLocation(){
+    try{ sessionStorage.setItem(LOCATION_KEY, JSON.stringify(location)); }catch(e){}
   }
   function loadAll(){
     try{
@@ -770,8 +767,8 @@
       }
     }catch(e){}
     try{
-      var rawUsual = localStorage.getItem(USUAL_KEY);
-      if(rawUsual){ try{ usualItems = JSON.parse(rawUsual); }catch(e){ usualItems = {}; } }
+      var rawLocation = sessionStorage.getItem(LOCATION_KEY);
+      if(rawLocation){ try{ location = Object.assign(location, JSON.parse(rawLocation)); }catch(e){} }
     }catch(e){}
     try{
       var rawRecipes = localStorage.getItem(RECIPES_KEY);
@@ -791,34 +788,12 @@
     }
   }
 
-  // Items you add often, surfaced as quick-add chips and mentioned when you
-  // ask Blurt to read your list back to you.
-  function recordUsualItem(query){
-    var key = query.toLowerCase();
-    var existing = usualItems[key] || { count: 0, label: query, lastAdded: 0 };
-    existing.count += 1;
-    existing.label = query;
-    existing.lastAdded = Date.now();
-    usualItems[key] = existing;
-    saveUsualItems();
-  }
-
-  function getUsualSuggestions(limit){
-    var onListKeys = {};
-    items.forEach(function(i){ onListKeys[i.query.toLowerCase()] = true; });
-    var candidates = Object.keys(usualItems)
-      .map(function(k){ return usualItems[k]; })
-      .filter(function(u){ return u.count >= 2 && !onListKeys[u.label.toLowerCase()]; })
-      .sort(function(a,b){ return b.count - a.count || b.lastAdded - a.lastAdded; });
-    return candidates.slice(0, limit || 5);
-  }
-
   function updateLocationDisplay(){
     var text = document.getElementById('locationText');
     if(hasLocation()){
-      text.innerHTML = settings.locationLabel
-        ? '<strong>' + escapeHtml(settings.locationLabel) + '</strong>'
-        : '<strong>' + escapeHtml(settings.zip || 'location set') + '</strong>';
+      text.innerHTML = location.locationLabel
+        ? '<strong>' + escapeHtml(location.locationLabel) + '</strong>'
+        : '<strong>' + escapeHtml(location.zip || 'location set') + '</strong>';
     } else {
       text.textContent = 'Set your shopping location';
     }
@@ -849,9 +824,9 @@
         return body;
       });
     }).then(function(body){
-      settings.zip = zip; settings.lat = null; settings.lon = null; settings.locationId = body.locationId;
-      settings.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
-      saveSettings();
+      location.zip = zip; location.lat = null; location.lon = null; location.locationId = body.locationId;
+      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+      saveLocation();
       updateLocationDisplay();
       msg.className = 'location-msg ok';
       msg.textContent = 'Found ' + body.name + '.';
@@ -879,9 +854,9 @@
           return body;
         });
       }).then(function(body){
-        settings.lat = lat; settings.lon = lon; settings.zip = ''; settings.locationId = body.locationId;
-        settings.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
-        saveSettings();
+        location.lat = lat; location.lon = lon; location.zip = ''; location.locationId = body.locationId;
+        location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+        saveLocation();
         updateLocationDisplay();
         msg.className = 'location-msg ok';
         msg.textContent = 'Found ' + body.name + '.';
@@ -905,10 +880,10 @@
     msg.className = 'location-msg'; msg.textContent = 'Checking your location…';
 
     function handleResolved(body){
-      var sameStore = settings.locationId && settings.locationId === body.locationId;
-      settings.locationId = body.locationId;
-      settings.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
-      saveSettings();
+      var sameStore = location.locationId && location.locationId === body.locationId;
+      location.locationId = body.locationId;
+      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+      saveLocation();
       updateLocationDisplay();
       if(sameStore){
         msg.className = 'location-msg ok';
@@ -927,7 +902,7 @@
         fetch(url).then(function(resp){
           return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
         }).then(function(body){
-          settings.lat = lat; settings.lon = lon; settings.zip = '';
+          location.lat = lat; location.lon = lon; location.zip = '';
           handleResolved(body);
         }).catch(function(err){
           msg.className = 'location-msg err';
@@ -935,8 +910,8 @@
         });
       }, function(){
         // Permission denied or unavailable — fall back to re-checking the saved ZIP, if any.
-        if(settings.zip){
-          var url2 = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(settings.zip);
+        if(location.zip){
+          var url2 = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(location.zip);
           fetch(url2).then(function(resp){
             return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
           }).then(handleResolved).catch(function(err){
@@ -948,8 +923,8 @@
           msg.textContent = 'Location permission denied — set a ZIP code instead.';
         }
       });
-    } else if(settings.zip){
-      var url3 = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(settings.zip);
+    } else if(location.zip){
+      var url3 = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(location.zip);
       fetch(url3).then(function(resp){
         return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
       }).then(handleResolved).catch(function(err){
@@ -1019,7 +994,6 @@
         budgetNotice: null, editingName: false, skipped: false
       };
       items.unshift(item);
-      recordUsualItem(q);
       if(item.status === 'loading') fetchOptions(item.id);
     });
     render(); saveList();
@@ -1153,23 +1127,6 @@
     return { minutes: Math.round(minutes), aisleCount: aisleCount };
   }
 
-  function renderUsualChips(){
-    var container = document.getElementById('usualChips');
-    var suggestions = getUsualSuggestions(5);
-    if(suggestions.length === 0){
-      container.style.display = 'none';
-      container.innerHTML = '';
-      return;
-    }
-    container.style.display = 'flex';
-    container.innerHTML = '<span class="usual-label">you usually get:</span>' + suggestions.map(function(u){
-      return '<button class="usual-chip" data-usual="' + escapeHtml(u.label) + '">' + escapeHtml(u.label) + '</button>';
-    }).join('');
-    container.querySelectorAll('[data-usual]').forEach(function(btn){
-      btn.addEventListener('click', function(){ addItems(btn.getAttribute('data-usual')); });
-    });
-  }
-
   function selectOption(id, productId){
     var it = items.find(function(i){ return i.id === id; });
     if(!it || !it.results) return;
@@ -1297,16 +1254,6 @@
           ? ' That is ' + fmt(Math.abs(remaining)) + ' over your budget.'
           : ' You have ' + fmt(remaining) + ' left in your budget.';
       }
-    }
-
-    // Gently mention regulars that aren't on the list this time, same data
-    // source as the quick-add chips.
-    var missing = getUsualSuggestions(3);
-    if(missing.length > 0){
-      var missingNames = missing.map(function(u){ return u.label; });
-      var missingText = missingNames.length === 1 ? missingNames[0]
-        : missingNames.slice(0, -1).join(', ') + ', and ' + missingNames[missingNames.length - 1];
-      text += ' You usually also get ' + missingText + ' — want to add ' + (missingNames.length === 1 ? 'it' : 'them') + '?';
     }
 
     try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }catch(e){}
@@ -1677,8 +1624,6 @@
       timeRow.style.display = 'none';
     }
 
-    renderUsualChips();
-
     if(items.length === 0){
       listEl.innerHTML = '<div class="empty-state">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>' +
@@ -1825,8 +1770,10 @@
       appVersion: document.getElementById('versionTag').textContent,
       items: items,
       recipes: recipes,
-      usualItems: usualItems,
       settings: settings
+      // Deliberately excludes location — Kroger's Acceptable Use policy prohibits
+      // storing customer location data, and a downloadable backup file would just
+      // relocate that same problem rather than solve it.
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
@@ -1870,11 +1817,10 @@
       try{
         if(data.items) localStorage.setItem(LIST_KEY, JSON.stringify(data.items));
         if(data.recipes) localStorage.setItem(RECIPES_KEY, JSON.stringify(data.recipes));
-        if(data.usualItems) localStorage.setItem(USUAL_KEY, JSON.stringify(data.usualItems));
         if(data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
         msg.className = 'backup-msg ok';
         msg.textContent = 'Imported — reloading…';
-        setTimeout(function(){ location.reload(); }, 700);
+        setTimeout(function(){ window.location.reload(); }, 700);
       }catch(err){
         msg.className = 'backup-msg err';
         msg.textContent = 'Import failed: ' + err.message;
@@ -2083,7 +2029,6 @@
         budgetNotice: null, editingName: false, skipped: false
       };
       items.unshift(item);
-      recordUsualItem(name);
       if(item.status === 'loading') fetchOptions(item.id);
     });
     render(); saveList();
