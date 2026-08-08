@@ -191,6 +191,25 @@
   .total-label{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:600; }
   .total-sub{ font-size:10.5px; color:var(--muted); display:block; margin-top:2px; text-transform:none; letter-spacing:0; font-weight:500; }
   .total-value{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; color:var(--green); }
+  .total-value.over-budget{ color:var(--pink-deep); }
+
+  .budget-row{ margin:0 26px; padding:6px 0 0; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .budget-text{ font-size:11px; color:var(--muted); }
+  .budget-text.over{ color:var(--pink-deep); font-weight:600; }
+  .budget-text.under{ color:var(--green); }
+  .budget-edit{ background:none; border:none; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer; padding:0; }
+  .budget-edit:hover{ color:var(--pink-deep); }
+  .budget-edit-row{ display:none; margin:8px 26px 0; gap:8px; }
+  .budget-edit-row.open{ display:flex; }
+  .budget-edit-row input{
+    flex:1; padding:7px 10px; border-radius:7px; border:1px solid var(--line);
+    background:#fff; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink);
+  }
+  .budget-edit-row button{
+    border:none; border-radius:7px; padding:0 12px; font-size:11.5px; font-weight:600; cursor:pointer;
+    background:var(--ink); color:var(--paper);
+  }
+  .budget-edit-row button:last-child{ background:#fff; border:1px solid var(--line) !important; color:var(--ink-soft); }
 
   .list{ padding:10px 26px 26px; }
   .empty-state{ text-align:center; padding:30px 10px 16px; color:var(--muted); }
@@ -337,6 +356,7 @@
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, etc.) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order. Walmart and Target aren't connected — neither has a free public pricing API.
+        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", and "what's my total" all work as spoken or typed commands instead of being added as items.
       </div>
     </header>
 
@@ -344,6 +364,7 @@
       <div class="location-row">
         <span class="location-icon">📍</span>
         <span class="location-text" id="locationText">Set your shopping location</span>
+        <button class="location-change" id="refreshLocationBtn" title="Re-check nearest store">refresh</button>
         <button class="location-change" id="locationChangeBtn">set</button>
       </div>
       <div class="location-edit" id="locationEdit">
@@ -373,9 +394,11 @@
     <div class="list-header">
       <h2>Your list</h2>
       <div class="list-header-actions">
+        <button class="recheck-btn" id="pickCheapestAll">pick cheapest for all</button>
         <button class="recheck-btn" id="recheckAll">recheck prices</button>
         <button class="aisle-toggle" id="aisleToggle">shop order</button>
         <button class="clear-btn" id="clearPicked">clear picked up</button>
+        <button class="clear-btn" id="resetListBtn">reset list</button>
       </div>
     </div>
     <div class="total-bar">
@@ -385,10 +408,19 @@
       </div>
       <div class="total-value" id="totalValue">$0.00</div>
     </div>
+    <div class="budget-row" id="budgetRow">
+      <span class="budget-text" id="budgetText">no budget set</span>
+      <button class="budget-edit" id="budgetEditBtn">set budget</button>
+    </div>
+    <div class="budget-edit-row" id="budgetEditRow">
+      <input type="number" id="budgetInput" placeholder="$ amount" min="0" step="1">
+      <button id="budgetSaveBtn">Save</button>
+      <button id="budgetClearBtn">Clear</button>
+    </div>
     <div class="list" id="list"></div>
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.6.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v1.7.0</span></footer>
 </div>
 
 <script>
@@ -404,7 +436,7 @@
   //   betterPriceAvailable, betterPrice, betterProductId, dismissedBetterPrice
   // }
   var items = [];
-  var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '', lat: null, lon: null, locationLabel: '' };
+  var settings = { backendUrl: 'https://blurt-br5e.onrender.com', zip: '', lat: null, lon: null, locationId: null, locationLabel: '', budget: null };
   var shopOrderMode = false;
 
   function fmt(n){ return '$' + Number(n).toFixed(2); }
@@ -505,7 +537,7 @@
         return body;
       });
     }).then(function(body){
-      settings.zip = zip; settings.lat = null; settings.lon = null;
+      settings.zip = zip; settings.lat = null; settings.lon = null; settings.locationId = body.locationId;
       settings.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
       saveSettings();
       updateLocationDisplay();
@@ -535,7 +567,7 @@
           return body;
         });
       }).then(function(body){
-        settings.lat = lat; settings.lon = lon; settings.zip = '';
+        settings.lat = lat; settings.lon = lon; settings.zip = ''; settings.locationId = body.locationId;
         settings.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
         saveSettings();
         updateLocationDisplay();
@@ -551,6 +583,114 @@
       msg.textContent = 'Location permission denied — use a ZIP code instead.';
     });
   });
+
+  // ---------- Refresh location: re-checks which store is nearest, and if it
+  // changed, re-searches every item against the new store — keeping a match
+  // if the exact same product is still there, otherwise reopening it as a
+  // fresh choice. Skips re-searching entirely if the store didn't change. ----------
+  function refreshLocation(){
+    var msg = document.getElementById('locationMsg');
+    msg.className = 'location-msg'; msg.textContent = 'Checking your location…';
+
+    function handleResolved(body){
+      var sameStore = settings.locationId && settings.locationId === body.locationId;
+      settings.locationId = body.locationId;
+      settings.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+      saveSettings();
+      updateLocationDisplay();
+      if(sameStore){
+        msg.className = 'location-msg ok';
+        msg.textContent = 'Still closest: ' + body.name + '.';
+      } else {
+        msg.className = 'location-msg ok';
+        msg.textContent = 'Switched to ' + body.name + ' — updating your list…';
+        rematchAllItems();
+      }
+    }
+
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat = pos.coords.latitude, lon = pos.coords.longitude;
+        var url = settings.backendUrl.replace(/\/$/, '') + '/api/location?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon);
+        fetch(url).then(function(resp){
+          return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
+        }).then(function(body){
+          settings.lat = lat; settings.lon = lon; settings.zip = '';
+          handleResolved(body);
+        }).catch(function(err){
+          msg.className = 'location-msg err';
+          msg.textContent = 'Could not refresh: ' + err.message;
+        });
+      }, function(){
+        // Permission denied or unavailable — fall back to re-checking the saved ZIP, if any.
+        if(settings.zip){
+          var url2 = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(settings.zip);
+          fetch(url2).then(function(resp){
+            return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
+          }).then(handleResolved).catch(function(err){
+            msg.className = 'location-msg err';
+            msg.textContent = 'Could not refresh: ' + err.message;
+          });
+        } else {
+          msg.className = 'location-msg err';
+          msg.textContent = 'Location permission denied — set a ZIP code instead.';
+        }
+      });
+    } else if(settings.zip){
+      var url3 = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(settings.zip);
+      fetch(url3).then(function(resp){
+        return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
+      }).then(handleResolved).catch(function(err){
+        msg.className = 'location-msg err';
+        msg.textContent = 'Could not refresh: ' + err.message;
+      });
+    } else {
+      msg.className = 'location-msg err';
+      msg.textContent = 'Set a location first.';
+    }
+  }
+
+  function rematchAllItems(){
+    var targets = items.filter(function(i){ return i.status === 'resolved' || i.status === 'choosing'; });
+    if(targets.length === 0) return;
+    var kept = 0, changed = 0, done = 0;
+    targets.forEach(function(it, idx){
+      setTimeout(function(){
+        var url = settings.backendUrl.replace(/\/$/, '') + '/api/compare?item=' + encodeURIComponent(it.query) + '&' + locationQueryPart();
+        fetch(url).then(function(resp){ return resp.json(); }).then(function(data){
+          var newResults = data.results || [];
+          it.results = newResults;
+          it.storeInfo = data.store || it.storeInfo;
+          if(it.status === 'resolved'){
+            var stillThere = newResults.find(function(p){ return p.productId === it.selectedProductId; });
+            if(stillThere){
+              it.priceAtSelection = stillThere.promoPrice || stillThere.regularPrice;
+              it.betterPriceAvailable = false;
+              it.dismissedBetterPrice = null;
+              kept++;
+            } else {
+              it.status = 'choosing';
+              it.expanded = true;
+              it.selectedProductId = null;
+              it.showAllOptions = false;
+              changed++;
+            }
+          }
+          done++;
+          saveList(); render();
+          if(done === targets.length){
+            var msg = document.getElementById('locationMsg');
+            var parts = [];
+            if(kept) parts.push(kept + ' kept the same pick');
+            if(changed) parts.push(changed + ' need a new pick');
+            if(parts.length) msg.textContent = 'Updated for the new store — ' + parts.join(', ') + '.';
+          }
+        }).catch(function(){ done++; });
+      }, idx * 400);
+    });
+  }
+
+  document.getElementById('refreshLocationBtn').addEventListener('click', refreshLocation);
 
   // ---------- Adding checklist items (supports multiple at once) ----------
   function addItems(rawText){
@@ -719,6 +859,92 @@
     saveList(); render();
   }
 
+  function resetList(){
+    if(items.length === 0) return;
+    var ok = window.confirm('Clear your entire list of ' + items.length + ' item' + (items.length===1?'':'s') + '? This cannot be undone.');
+    if(!ok) return;
+    items = [];
+    saveList(); render();
+  }
+  document.getElementById('resetListBtn').addEventListener('click', resetList);
+
+  function pickCheapestForAll(){
+    var targets = items.filter(function(i){ return i.status === 'choosing' && i.results && i.results.length; });
+    targets.forEach(function(it){
+      var opts = sortedOptions(it);
+      if(opts.length){ selectOption(it.id, opts[0].productId); }
+    });
+  }
+  document.getElementById('pickCheapestAll').addEventListener('click', pickCheapestForAll);
+
+  // ---------- Budget cap ----------
+  var budgetEditRow = document.getElementById('budgetEditRow');
+  document.getElementById('budgetEditBtn').addEventListener('click', function(){
+    var input = document.getElementById('budgetInput');
+    input.value = (settings.budget !== null && settings.budget !== undefined) ? settings.budget : '';
+    budgetEditRow.classList.toggle('open');
+    if(budgetEditRow.classList.contains('open')) input.focus();
+  });
+  document.getElementById('budgetSaveBtn').addEventListener('click', function(){
+    var val = parseFloat(document.getElementById('budgetInput').value);
+    settings.budget = isNaN(val) ? null : val;
+    saveSettings(); render();
+    budgetEditRow.classList.remove('open');
+  });
+  document.getElementById('budgetClearBtn').addEventListener('click', function(){
+    settings.budget = null;
+    saveSettings(); render();
+    document.getElementById('budgetInput').value = '';
+    budgetEditRow.classList.remove('open');
+  });
+
+  // ---------- Read the list total aloud ----------
+  function speakSummary(){
+    if(!('speechSynthesis' in window)) return;
+    var resolved = items.filter(function(i){ return i.status === 'resolved'; });
+    var text;
+    if(resolved.length === 0){
+      text = 'Your list is empty right now.';
+    } else {
+      var totalItems = resolved.reduce(function(sum,i){ return sum + i.qty; }, 0);
+      var totalPrice = resolved.reduce(function(sum,i){
+        var p = selectedProduct(i);
+        var price = p ? (p.promoPrice || p.regularPrice) : 0;
+        return sum + price * i.qty;
+      }, 0);
+      text = 'You have ' + totalItems + (totalItems===1?' item':' items') + ' on your list, totaling ' + fmt(totalPrice) + '.';
+      if(settings.budget !== null && settings.budget !== undefined){
+        var remaining = settings.budget - totalPrice;
+        text += remaining < 0
+          ? ' That is ' + fmt(Math.abs(remaining)) + ' over your budget.'
+          : ' You have ' + fmt(remaining) + ' left in your budget.';
+      }
+    }
+    try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }catch(e){}
+  }
+
+  // ---------- Voice / typed command interpreter ----------
+  // Runs before treating text as items to add — lets "clear list" etc. work
+  // the same whether spoken or typed. Returns true if a command was matched.
+  function tryRunCommand(text){
+    var t = text.trim().toLowerCase().replace(/[.!?]+$/, '');
+    var commandTable = [
+      { patterns: ['clear list', 'reset list', 'clear my list', 'empty the list', 'empty my list', 'start over', 'clear everything'], action: resetList },
+      { patterns: ['reset location', 'refresh location', 'update location', 'change location', 'recheck location', 'find closer store', 'find a closer store'], action: refreshLocation },
+      { patterns: ['recheck prices', 'check prices', 'update prices', 'refresh prices'], action: recheckAll },
+      { patterns: ['clear picked up', 'clear checked', 'clear picked items', 'clear my picked up items'], action: clearPicked },
+      { patterns: ['pick cheapest', 'pick cheapest for everything', 'pick cheapest for all', 'choose cheapest for everything', 'auto pick cheapest'], action: pickCheapestForAll },
+      { patterns: ['read my total', 'whats my total', "what's my total", 'read total', 'how much so far', 'whats my list', "what's my list", 'read my list', 'read list'], action: speakSummary }
+    ];
+    for(var i = 0; i < commandTable.length; i++){
+      if(commandTable[i].patterns.indexOf(t) !== -1){
+        commandTable[i].action();
+        return true;
+      }
+    }
+    return false;
+  }
+
   var aisleToggleBtn = document.getElementById('aisleToggle');
   aisleToggleBtn.addEventListener('click', function(){
     shopOrderMode = !shopOrderMode;
@@ -873,6 +1099,23 @@
     if(betterCount) subParts.push(betterCount + ' price drop' + (betterCount===1?'':'s'));
     totalSub.textContent = subParts.join(' · ');
 
+    var budgetText = document.getElementById('budgetText');
+    if(settings.budget !== null && settings.budget !== undefined){
+      var remaining = settings.budget - totalPrice;
+      totalValue.className = 'total-value' + (remaining < 0 ? ' over-budget' : '');
+      if(remaining < 0){
+        budgetText.className = 'budget-text over';
+        budgetText.textContent = fmt(Math.abs(remaining)) + ' over your ' + fmt(settings.budget) + ' budget';
+      } else {
+        budgetText.className = 'budget-text under';
+        budgetText.textContent = fmt(remaining) + ' left of your ' + fmt(settings.budget) + ' budget';
+      }
+    } else {
+      totalValue.className = 'total-value';
+      budgetText.className = 'budget-text';
+      budgetText.textContent = 'no budget set';
+    }
+
     if(items.length === 0){
       listEl.innerHTML = '<div class="empty-state">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>' +
@@ -975,7 +1218,7 @@
   function submitManual(){
     var v = manualInput.value.trim();
     if(!v) return;
-    addItems(v);
+    if(!tryRunCommand(v)) addItems(v);
     manualInput.value = '';
   }
 
@@ -1009,7 +1252,7 @@
           if(e.results[i].isFinal) final += t; else interim += t;
         }
         liveTranscript.textContent = final || interim;
-        if(final) addItems(final);
+        if(final){ if(!tryRunCommand(final)) addItems(final); }
       };
       recognition.onerror = function(e){
         listening = false;
