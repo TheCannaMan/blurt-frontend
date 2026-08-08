@@ -394,6 +394,27 @@
     padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;
   }
   .recipe-search-status{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); margin-top:10px; display:flex; align-items:center; gap:6px; }
+
+  .surprise-row{ display:flex; gap:8px; margin-top:12px; }
+  .surprise-row select{
+    flex:1; padding:9px 10px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:12.5px; color:var(--ink);
+  }
+  #rollRandomBtn{
+    background:var(--gold); color:var(--ink); border:none; border-radius:8px;
+    padding:0 14px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  #rollRandomBtn:hover{ filter:brightness(0.92); }
+  .random-spotlight{ margin-top:12px; }
+  .spotlight-card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; text-align:center; }
+  .spotlight-thumb{ width:120px; height:120px; border-radius:10px; object-fit:cover; margin:0 auto 10px; display:block; cursor:zoom-in; }
+  .spotlight-name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; margin-bottom:12px; line-height:1.3; }
+  .spotlight-actions{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .reroll-btn{
+    background:var(--pink); color:var(--paper); border:none; border-radius:14px;
+    font-size:11px; padding:6px 12px; cursor:pointer; font-weight:600;
+  }
+  .reroll-btn:hover{ background:var(--pink-deep); }
   .recipe-search-results{ margin-top:8px; display:flex; flex-direction:column; gap:8px; padding-bottom:10px; }
   .recipe-result-row{
     display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
@@ -534,7 +555,7 @@
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, etc.) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order. Walmart and Target aren't connected — neither has a free public pricing API.
-        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
+        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
       </div>
     </header>
 
@@ -623,6 +644,15 @@
           <button id="recipeSearchBtn">Search</button>
           <button class="recipe-clear-btn" id="recipeSearchClear">Clear</button>
         </div>
+
+        <div class="surprise-row">
+          <select id="randomCategorySelect">
+            <option value="any">🎲 Any category</option>
+          </select>
+          <button id="rollRandomBtn">🎲 Surprise me</button>
+        </div>
+        <div class="random-spotlight" id="randomSpotlight" style="display:none;"></div>
+
         <div class="recipe-search-status" id="recipeSearchStatus"></div>
         <div class="recipe-search-results" id="recipeSearchResults"></div>
       </div>
@@ -652,7 +682,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.3.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.4.0</span></footer>
 </div>
 
 <script>
@@ -676,6 +706,7 @@
   var usualItems = {}; // lowercase query -> { count, label, lastAdded }
   var recipes = []; // { id, name, ingredients: [string,...], sourceUrl, thumbnail, createdAt }
   var recipeSearchResults = [];
+  var randomMeal = null; // currently-shown "surprise me" pick, if any
   var activeTab = 'shop';
   var recipeFilter = 'all'; // 'all' | 'recipe' | 'list'
   var expandedRecipeIds = {}; // runtime-only UI state, not persisted
@@ -1325,7 +1356,8 @@
       { patterns: ['whats my budget', "what's my budget", 'check my budget', 'how much is my budget', 'read my budget'], action: announceBudget },
       { patterns: ['go to recipes', 'open recipes', 'find a recipe', 'search for a recipe', 'search recipes'], action: function(){ setActiveTab('search'); document.getElementById('recipeSearchInput').focus(); } },
       { patterns: ['go to shopping', 'go to shop', 'go shopping', 'open shopping list', 'switch to shopping'], action: function(){ setActiveTab('shop'); } },
-      { patterns: ['go to saved', 'open saved recipes', 'show my saved recipes', 'show saved lists'], action: function(){ setActiveTab('saved'); } }
+      { patterns: ['go to saved', 'open saved recipes', 'show my saved recipes', 'show saved lists'], action: function(){ setActiveTab('saved'); } },
+      { patterns: ['surprise me', 'random recipe', 'surprise me with a recipe', 'pick a recipe for me', 'choose a recipe for me', 'roll a recipe'], action: function(){ setActiveTab('search'); document.getElementById('randomCategorySelect').value = 'any'; rollRandomRecipe(); } }
     ];
     for(var i = 0; i < commandTable.length; i++){
       if(commandTable[i].patterns.indexOf(t) !== -1){
@@ -1937,6 +1969,78 @@
     recipeSearchResults = [];
   });
 
+  // ---------- "Surprise me" — random recipe, optionally within a category ----------
+  function loadRandomCategories(){
+    fetch(MEALDB_BASE + '/list.php?c=list')
+      .then(function(resp){ return resp.json(); })
+      .then(function(data){
+        var names = (data.meals || []).map(function(m){ return m.strCategory; }).filter(Boolean).sort();
+        var select = document.getElementById('randomCategorySelect');
+        select.innerHTML = '<option value="any">🎲 Any category</option>' +
+          names.map(function(c){ return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; }).join('');
+      })
+      .catch(function(){ /* dropdown just stays on "Any category" if this fails — not critical */ });
+  }
+
+  function fetchRandomMeal(category){
+    if(!category || category === 'any'){
+      return fetch(MEALDB_BASE + '/random.php')
+        .then(function(resp){ return resp.json(); })
+        .then(function(data){ return (data.meals && data.meals[0]) || null; });
+    }
+    return fetch(MEALDB_BASE + '/filter.php?c=' + encodeURIComponent(category))
+      .then(function(resp){ return resp.json(); })
+      .then(function(data){
+        var list = data.meals || [];
+        if(list.length === 0) return null;
+        var pick = list[Math.floor(Math.random() * list.length)];
+        // filter.php only gives id/name/thumb — look up full details (including ingredients) separately
+        return fetch(MEALDB_BASE + '/lookup.php?i=' + pick.idMeal)
+          .then(function(r2){ return r2.json(); })
+          .then(function(d2){ return (d2.meals && d2.meals[0]) || null; });
+      });
+  }
+
+  var ROLL_MESSAGES = ['rolling the dice…', 'shuffling the menu…', 'spinning the wheel…', 'flipping through the cookbook…'];
+
+  function rollRandomRecipe(){
+    var category = document.getElementById('randomCategorySelect').value;
+    var el = document.getElementById('randomSpotlight');
+    el.style.display = 'block';
+    var msg = ROLL_MESSAGES[Math.floor(Math.random() * ROLL_MESSAGES.length)];
+    el.innerHTML = '<div class="search-status"><span class="spinner"></span> ' + msg + '</div>';
+    fetchRandomMeal(category).then(function(meal){
+      if(!meal){
+        el.innerHTML = '<div class="search-status">Could not find one in that category — try again, or pick "Any category."</div>';
+        return;
+      }
+      randomMeal = meal;
+      renderRandomSpotlight();
+    }).catch(function(){
+      el.innerHTML = '<div class="search-status">Could not reach the recipe search right now.</div>';
+    });
+  }
+  document.getElementById('rollRandomBtn').addEventListener('click', rollRandomRecipe);
+
+  function renderRandomSpotlight(){
+    var el = document.getElementById('randomSpotlight');
+    if(!randomMeal){ el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = 'block';
+    var alreadySaved = recipes.some(function(r){ return r.sourceId === randomMeal.idMeal; });
+    el.innerHTML = '<div class="spotlight-card">' +
+      '<img class="spotlight-thumb" src="' + escapeHtml(randomMeal.strMealThumb || '') + '" alt="" data-view-image="' + escapeHtml(randomMeal.strMealThumb || '') + '">' +
+      '<div class="spotlight-name">' + escapeHtml(randomMeal.strMeal) + '</div>' +
+      '<div class="spotlight-actions">' +
+        '<button class="recipe-add-btn-sm" id="spotlightAddBtn">+ Add to list</button>' +
+        '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" id="spotlightSaveBtn">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
+        '<button class="reroll-btn" id="spotlightRerollBtn">🎲 Reroll</button>' +
+      '</div>' +
+    '</div>';
+    document.getElementById('spotlightAddBtn').addEventListener('click', function(){ quickAddMealToShop(randomMeal.idMeal); });
+    document.getElementById('spotlightSaveBtn').addEventListener('click', function(){ toggleSaveMeal(randomMeal.idMeal); });
+    document.getElementById('spotlightRerollBtn').addEventListener('click', rollRandomRecipe);
+  }
+
   // Shared by both "add a saved recipe" and "quick-add straight from search
   // results" — pushes a plain array of ingredient names into the shop list.
   function pushIngredientNamesToShop(names){
@@ -1977,8 +2081,17 @@
     });
   }
 
+  // Looks in both the current search results and the current "surprise me"
+  // pick — either can be the source of a Save/Add-to-list click.
+  function findMealById(mealId){
+    var fromSearch = recipeSearchResults.find(function(m){ return m.idMeal === mealId; });
+    if(fromSearch) return fromSearch;
+    if(randomMeal && randomMeal.idMeal === mealId) return randomMeal;
+    return null;
+  }
+
   function quickAddMealToShop(mealId){
-    var meal = recipeSearchResults.find(function(m){ return m.idMeal === mealId; });
+    var meal = findMealById(mealId);
     if(!meal) return;
     var names = extractMealIngredients(meal).map(function(ing){ return ing.searchTerm; });
     pushIngredientNamesToShop(names);
@@ -1986,7 +2099,7 @@
 
   function saveMealAsRecipe(mealId){
     if(recipes.some(function(r){ return r.sourceId === mealId; })) return; // already saved, don't duplicate
-    var meal = recipeSearchResults.find(function(m){ return m.idMeal === mealId; });
+    var meal = findMealById(mealId);
     if(!meal) return;
     var sourceUrl = (meal.strSource && meal.strSource.trim()) ? meal.strSource.trim() : ('https://www.themealdb.com/meal/' + meal.idMeal);
     recipes.unshift({
@@ -2003,6 +2116,7 @@
     saveRecipes();
     renderRecipeSearchResults();
     renderRecipeList();
+    renderRandomSpotlight();
   }
 
   // Clicking "Save" the first time saves it; clicking it again (now showing
@@ -2017,6 +2131,7 @@
       saveRecipes();
       renderRecipeSearchResults();
       renderRecipeList();
+      renderRandomSpotlight();
     } else {
       saveMealAsRecipe(mealId);
     }
@@ -2247,6 +2362,7 @@
   });
 
   loadAll();
+  loadRandomCategories();
 })();
 </script>
 </body>
