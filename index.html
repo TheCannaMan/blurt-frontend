@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blurt — say it before you forget it</title>
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://www.gstatic.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' https: data:;
+  connect-src 'self' https://*.onrender.com https://www.themealdb.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com;
+  base-uri 'self';
+  object-src 'none';
+  form-action 'self';
+">
 <link rel="icon" type="image/png" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
@@ -894,7 +905,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.12.1</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.13.0</span></footer>
 </div>
 
 <script type="module">
@@ -1001,6 +1012,21 @@
     return String(s).replace(/[&<>"']/g, function(c){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
+  }
+
+  // HTML-escaping alone doesn't stop a "javascript:" (or "data:", "vbscript:")
+  // URL from being placed as a real, clickable href — those need their scheme
+  // checked directly. Used both when a link is entered and again at render
+  // time as defense-in-depth for any data that arrives another way (e.g. an
+  // imported backup file).
+  function isSafeUrl(url){
+    if(!url) return false;
+    try{
+      var parsed = new URL(String(url), window.location.origin);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    }catch(e){
+      return false;
+    }
   }
 
   function parseMultipleItems(text){
@@ -2084,13 +2110,14 @@
     var alreadySaved = recipes.some(function(r){ return r.sourceId === meal.idMeal; });
     var imgHtml = meal.strMealThumb ? '<img class="modal-image" style="margin-bottom:10px;" src="' + escapeHtml(meal.strMealThumb) + '" alt="">' : '';
     var ingredientsHtml = ingredients.map(function(ing){ return '<li>' + escapeHtml(ing.display) + '</li>'; }).join('');
+    var previewLinkHtml = isSafeUrl(sourceUrl) ? '<a class="recipe-link" href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(sourceLabel) + ' →</a>' : '';
     var html = imgHtml +
       '<div class="modal-detail-name">' + escapeHtml(meal.strMeal) + '</div>' +
       '<ul class="recipe-ingredients">' + ingredientsHtml + '</ul>' +
       '<div class="recipe-card-actions" style="margin-top:14px;">' +
         '<button class="recipe-add-btn-sm" id="previewAddBtn">+ Add to list</button>' +
         '<button class="recipe-save-btn' + (alreadySaved ? ' saved' : '') + '" id="previewSaveBtn">' + (alreadySaved ? 'Saved ✓' : 'Save') + '</button>' +
-        '<a class="recipe-link" href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(sourceLabel) + ' →</a>' +
+        previewLinkHtml +
       '</div>';
     openModal(html);
     document.getElementById('previewAddBtn').addEventListener('click', function(){ quickAddMealToShop(meal.idMeal); closeModal(); });
@@ -2925,6 +2952,11 @@
     var rawIngredients = document.getElementById('manualRecipeIngredients').value;
     var link = document.getElementById('manualRecipeLink').value.trim();
     if(!name){ document.getElementById('manualRecipeName').focus(); return; }
+    if(link && !isSafeUrl(link)){
+      window.alert('That link doesn\'t look like a valid web address — please use a normal http:// or https:// URL, or leave it blank.');
+      document.getElementById('manualRecipeLink').focus();
+      return;
+    }
     var ingredients = rawIngredients.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; })
       .map(function(l){ return { display: l, searchTerm: stripLeadingMeasure(l) }; });
     if(ingredients.length === 0){ document.getElementById('manualRecipeIngredients').focus(); return; }
@@ -2989,7 +3021,7 @@
       var isExpanded = !!expandedRecipeIds[r.id];
       var type = r.type || 'list';
       var thumbHtml = r.thumbnail ? '<img class="recipe-card-thumb" src="' + escapeHtml(r.thumbnail) + '" alt="" onerror="this.style.display=\'none\'">' : '';
-      var linkHtml = r.sourceUrl ? '<a class="recipe-link" href="' + escapeHtml(r.sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(r.sourceLabel || 'View link') + ' →</a>' : '';
+      var linkHtml = isSafeUrl(r.sourceUrl) ? '<a class="recipe-link" href="' + escapeHtml(r.sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(r.sourceLabel || 'View link') + ' →</a>' : '';
       var ingredientsHtml = r.ingredients.map(function(ing){
         return '<li>' + escapeHtml(ing.display) + '</li>';
       }).join('');
