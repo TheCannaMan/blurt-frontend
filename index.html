@@ -125,11 +125,28 @@
   .info-panel.open{ display:block; }
 
   /* Location bar */
-  .location-bar{ padding:14px 26px; border-bottom:1px dashed var(--line); }
+  .location-bar{ padding:14px 26px; border-bottom:1px dashed var(--line); transition:background 0.2s ease; }
+  .location-bar.needs-attention{ background:rgba(244,196,48,0.14); }
   .location-row{ display:flex; align-items:center; gap:8px; }
   .location-icon{ font-size:14px; flex-shrink:0; }
   .location-text{ flex:1; font-size:12.5px; color:var(--ink-soft); min-width:0; }
   .location-text strong{ color:var(--ink); }
+  .stale-note{ color:var(--gold); font-weight:600; }
+  .location-bar.needs-attention .location-refresh-btn{
+    animation:pulse-attention 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-attention{
+    0%, 100%{ box-shadow:0 0 0 0 rgba(244,196,48,0.55); }
+    50%{ box-shadow:0 0 0 6px rgba(244,196,48,0); }
+  }
+  .location-refresh-btn{
+    background:var(--pink); color:var(--paper); border:none; border-radius:14px;
+    font-size:11.5px; font-weight:700; padding:6px 12px; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; gap:5px; font-family:'Inter',sans-serif;
+  }
+  .location-refresh-btn svg{ width:12px; height:12px; }
+  .location-refresh-btn:hover{ background:var(--pink-deep); }
+  .location-refresh-btn:active svg{ transform:rotate(180deg); transition:transform 0.4s ease; }
   .location-change{
     background:none; border:1px solid var(--line); border-radius:12px; font-size:10.5px;
     padding:4px 10px; cursor:pointer; color:var(--ink-soft); flex-shrink:0;
@@ -465,7 +482,7 @@
   .recipe-link:hover{ color:var(--pink-deep); }
   .recipe-empty{ text-align:center; padding:24px 10px 10px; color:var(--muted); font-size:13px; }
 
-  @media (prefers-reduced-motion: reduce){ .ring, .spinner{ animation:none !important; } }
+  @media (prefers-reduced-motion: reduce){ .ring, .spinner, .location-refresh-btn{ animation:none !important; } }
 
   /* Modal — used for both the image lightbox and the product detail view */
   .modal-overlay{
@@ -547,6 +564,7 @@
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
+        <br><br><strong>About your location:</strong> Blurt doesn't remember it between visits, so if it's been about an hour the location bar will gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
         <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
       </div>
     </header>
@@ -558,12 +576,15 @@
     </div>
 
     <div id="shopSection">
-    <div class="location-bar">
+    <div class="location-bar" id="locationBar">
       <div class="location-row">
         <span class="location-icon">📍</span>
         <span class="location-text" id="locationText">Set your shopping location</span>
-        <button class="location-change" id="refreshLocationBtn" title="Re-check nearest store">refresh</button>
-        <button class="location-change" id="locationChangeBtn">set</button>
+        <button class="location-refresh-btn" id="refreshLocationBtn" title="Re-check nearest store and update your list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          Update
+        </button>
+        <button class="location-change" id="locationChangeBtn">change</button>
       </div>
       <div class="location-edit" id="locationEdit">
         <input type="text" id="zipMainInput" placeholder="ZIP code" maxlength="10">
@@ -673,7 +694,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.7.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.8.0</span></footer>
 </div>
 
 <script>
@@ -699,7 +720,8 @@
   // clears the moment the tab/browser closes — a defensible middle ground
   // (mirrors the Cart API's own explicit "terminate on close" language) but
   // not a guarantee; worth confirming directly with Kroger if certainty matters.
-  var location = { zip: '', lat: null, lon: null, locationId: null, locationLabel: '' };
+  var location = { zip: '', lat: null, lon: null, locationId: null, locationLabel: '', lastCheckedAt: null };
+  var STALE_LOCATION_MS = 60 * 60 * 1000; // an hour without checking — long enough to cover a normal shopping trip, short enough to catch "drove somewhere else"
   var sortMode = 'added'; // 'added' | 'aisle' | 'category' | 'alpha' | 'price-asc' | 'price-desc'
   var recipes = []; // { id, name, ingredients: [string,...], sourceUrl, thumbnail, createdAt }
   var recipeSearchResults = [];
@@ -788,12 +810,22 @@
     }
   }
 
+  function isLocationStale(){
+    return hasLocation() && location.lastCheckedAt && (Date.now() - location.lastCheckedAt) > STALE_LOCATION_MS;
+  }
+
   function updateLocationDisplay(){
     var text = document.getElementById('locationText');
+    var bar = document.getElementById('locationBar');
+    var stale = isLocationStale();
+    bar.classList.toggle('needs-attention', stale);
     if(hasLocation()){
-      text.innerHTML = location.locationLabel
+      var label = location.locationLabel
         ? '<strong>' + escapeHtml(location.locationLabel) + '</strong>'
         : '<strong>' + escapeHtml(location.zip || 'location set') + '</strong>';
+      text.innerHTML = stale
+        ? label + '<span class="stale-note"> · shopping somewhere new? tap Update</span>'
+        : label;
     } else {
       text.textContent = 'Set your shopping location';
     }
@@ -825,7 +857,7 @@
       });
     }).then(function(body){
       location.zip = zip; location.lat = null; location.lon = null; location.locationId = body.locationId;
-      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : ''); location.lastCheckedAt = Date.now();
       saveLocation();
       updateLocationDisplay();
       msg.className = 'location-msg ok';
@@ -855,7 +887,7 @@
         });
       }).then(function(body){
         location.lat = lat; location.lon = lon; location.zip = ''; location.locationId = body.locationId;
-        location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+        location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : ''); location.lastCheckedAt = Date.now();
         saveLocation();
         updateLocationDisplay();
         msg.className = 'location-msg ok';
@@ -882,7 +914,7 @@
     function handleResolved(body){
       var sameStore = location.locationId && location.locationId === body.locationId;
       location.locationId = body.locationId;
-      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : ''); location.lastCheckedAt = Date.now();
       saveLocation();
       updateLocationDisplay();
       if(sameStore){
@@ -2364,6 +2396,14 @@
       }
     }
   });
+
+  // Purely time-based staleness check — no geolocation call needed just to
+  // show the hint, only when the person actually taps Update. Catches the
+  // "left the tab open through a commute" case without polling in the background.
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') updateLocationDisplay();
+  });
+  setInterval(updateLocationDisplay, 5 * 60 * 1000);
 
   loadAll();
   loadRandomCategories();
