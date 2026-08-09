@@ -105,6 +105,8 @@
   .settings-msg.ok{ color:var(--green); }
   .settings-msg.err{ color:var(--pink-deep); }
   .backup-section{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); }
+  .account-section{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); }
+  .account-status{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
   .backup-label{
     font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase;
     letter-spacing:0.05em; color:var(--muted); margin-bottom:6px; font-weight:600;
@@ -549,6 +551,19 @@
         </div>
         <div class="settings-msg" id="settingsMsg"></div>
 
+        <div class="account-section">
+          <div class="backup-label">Sync across devices</div>
+          <p>Optional — sign in with Google to keep your list and recipes synced across devices. Never required; everything works fully signed out, stored on this device only. Your shopping location is never synced, even signed in.</p>
+          <div id="accountSignedOut">
+            <button class="btn-test" id="googleSignInBtn">Sign in with Google</button>
+          </div>
+          <div id="accountSignedIn" style="display:none;">
+            <div class="account-status" id="accountStatusText"></div>
+            <button class="btn-test" id="googleSignOutBtn">Sign out</button>
+          </div>
+          <div class="backup-msg" id="accountMsg"></div>
+        </div>
+
         <div class="backup-section">
           <div class="backup-label">Backup</div>
           <p>Everything lives on this device only. Export a backup file to keep somewhere safe or move to another device — import it there to restore.</p>
@@ -694,9 +709,51 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.8.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.9.0</span></footer>
 </div>
 
+<script type="module">
+  // Firebase — used only for optional Google sign-in and cross-device sync.
+  // Config values below are meant to be public (Firebase's real security is
+  // enforced by Firestore's server-side rules, not by hiding this object).
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc }
+    from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0CU2PwMTIJ5vCBPUiWWkIEMarBxXGxSA",
+    authDomain: "blurt-c46d4.firebaseapp.com",
+    projectId: "blurt-c46d4",
+    storageBucket: "blurt-c46d4.firebasestorage.app",
+    messagingSenderId: "406589887865",
+    appId: "1:406589887865:web:f0a5bea89d1fc28fd14ba8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  // Exposed as a small global API so the main (classic, non-module) app
+  // script can use it without needing to become a module itself.
+  window.BlurtCloud = {
+    onAuthChange: function(cb){ onAuthStateChanged(auth, cb); },
+    signIn: function(){ return signInWithPopup(auth, provider); },
+    signOut: function(){ return signOut(auth); },
+    loadData: function(uid){
+      return getDoc(doc(db, 'users', uid)).then(function(snap){
+        return snap.exists() ? snap.data() : null;
+      });
+    },
+    // Always writes the full current snapshot (items/recipes/settings only —
+    // never location) rather than a partial update.
+    saveData: function(uid, data){
+      return setDoc(doc(db, 'users', uid), data, { merge: false });
+    }
+  };
+</script>
 <script>
 (function(){
   const LIST_KEY = 'blurt:items';
@@ -729,6 +786,8 @@
   var activeTab = 'shop';
   var recipeFilter = 'all'; // 'all' | 'recipe' | 'list'
   var expandedRecipeIds = {}; // runtime-only UI state, not persisted
+  var currentUser = null; // Google account, if signed in — null means fully local/device-only
+  var cloudSyncTimer = null;
 
   function fmt(n){ return '$' + Number(n).toFixed(2); }
   function escapeHtml(s){
@@ -770,9 +829,11 @@
 
   function saveList(){
     try{ localStorage.setItem(LIST_KEY, JSON.stringify(items)); }catch(e){}
+    scheduleCloudSync();
   }
   function saveSettings(){
     try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
+    scheduleCloudSync();
   }
   function saveLocation(){
     try{ sessionStorage.setItem(LOCATION_KEY, JSON.stringify(location)); }catch(e){}
@@ -1823,6 +1884,97 @@
     });
   });
 
+  // ---------- Cloud sync (optional Google account) ----------
+  function scheduleCloudSync(){
+    if(!currentUser || !window.BlurtCloud) return;
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(function(){
+      window.BlurtCloud.saveData(currentUser.uid, { items: items, recipes: recipes, settings: settings }).catch(function(){});
+    }, 1500);
+  }
+
+  function updateAccountUI(){
+    var signedOut = document.getElementById('accountSignedOut');
+    var signedIn = document.getElementById('accountSignedIn');
+    if(currentUser){
+      signedOut.style.display = 'none';
+      signedIn.style.display = 'block';
+      document.getElementById('accountStatusText').textContent =
+        'Signed in as ' + (currentUser.email || currentUser.displayName || 'your Google account');
+    } else {
+      signedOut.style.display = 'block';
+      signedIn.style.display = 'none';
+    }
+  }
+
+  function handleAuthChange(user){
+    currentUser = user;
+    updateAccountUI();
+    var msg = document.getElementById('accountMsg');
+    if(!user){
+      msg.textContent = '';
+      return;
+    }
+    msg.className = 'backup-msg';
+    msg.textContent = 'Checking your account for existing synced data…';
+    window.BlurtCloud.loadData(user.uid).then(function(cloudData){
+      if(cloudData){
+        // Existing cloud data found — it becomes the source of truth on this device.
+        items = cloudData.items || [];
+        recipes = cloudData.recipes || [];
+        if(cloudData.settings) settings = Object.assign(settings, cloudData.settings);
+        try{ localStorage.setItem(LIST_KEY, JSON.stringify(items)); }catch(e){}
+        try{ localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes)); }catch(e){}
+        try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
+        document.getElementById('backendUrl').value = settings.backendUrl || '';
+        render();
+        renderRecipeList();
+        msg.className = 'backup-msg ok';
+        msg.textContent = 'Synced from your account.';
+      } else {
+        // First time this account has signed in — upload whatever is on
+        // this device now as the starting point, rather than losing it.
+        window.BlurtCloud.saveData(user.uid, { items: items, recipes: recipes, settings: settings }).then(function(){
+          msg.className = 'backup-msg ok';
+          msg.textContent = "This device's data is now backed up to your account.";
+        }).catch(function(err){
+          msg.className = 'backup-msg err';
+          msg.textContent = 'Could not back up: ' + err.message;
+        });
+      }
+    }).catch(function(err){
+      msg.className = 'backup-msg err';
+      msg.textContent = 'Could not sync: ' + err.message;
+    });
+  }
+
+  function initCloudUI(){
+    if(window.BlurtCloud){
+      window.BlurtCloud.onAuthChange(handleAuthChange);
+    } else {
+      setTimeout(initCloudUI, 50); // module script may not have finished loading yet
+    }
+  }
+  initCloudUI();
+
+  document.getElementById('googleSignInBtn').addEventListener('click', function(){
+    var msg = document.getElementById('accountMsg');
+    if(!window.BlurtCloud){
+      msg.className = 'backup-msg err';
+      msg.textContent = 'Still loading — try again in a moment.';
+      return;
+    }
+    msg.className = 'backup-msg';
+    msg.textContent = 'Signing in…';
+    window.BlurtCloud.signIn().catch(function(err){
+      msg.className = 'backup-msg err';
+      msg.textContent = 'Sign-in failed: ' + err.message;
+    });
+  });
+  document.getElementById('googleSignOutBtn').addEventListener('click', function(){
+    if(window.BlurtCloud) window.BlurtCloud.signOut();
+  });
+
   // ---------- Backup: export/import everything as one JSON file ----------
   // This is deliberately a single flat snapshot of every localStorage key —
   // the same shape would become the payload for cloud sync later, so this
@@ -1929,6 +2081,7 @@
   // ---------- Recipes & Lists ----------
   function saveRecipes(){
     try{ localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes)); }catch(e){}
+    scheduleCloudSync();
   }
 
   // Strips a leading quantity/unit ("2 cups", "1/2 tsp", "3 cloves") off an
