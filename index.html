@@ -6,11 +6,12 @@
 <title>Blurt — say it before you forget it</title>
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'unsafe-inline' https://www.gstatic.com;
+  script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' https: data:;
-  connect-src 'self' https://*.onrender.com https://www.themealdb.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://blurt-c46d4.firebaseapp.com;
+  connect-src 'self' https://*.onrender.com https://www.themealdb.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://blurt-c46d4.firebaseapp.com https://www.gstatic.com https://apis.google.com;
+  frame-src https://accounts.google.com https://blurt-c46d4.firebaseapp.com https://apis.google.com;
   base-uri 'self';
   object-src 'none';
   form-action 'self';
@@ -905,7 +906,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.13.1</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.13.2</span></footer>
 </div>
 
 <script type="module">
