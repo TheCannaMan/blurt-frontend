@@ -221,6 +221,32 @@
 
   .list-header{ padding:16px 26px 4px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
   .list-header h2{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin:0; font-weight:600; }
+  .list-switcher{
+    background:none; border:none; cursor:pointer; font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:15px; color:var(--ink); padding:0; display:flex; align-items:center; gap:4px;
+  }
+  .list-switcher-caret{ font-size:11px; color:var(--muted); }
+  .list-switcher:hover .list-switcher-caret{ color:var(--pink-deep); }
+  .lists-modal-rows{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .list-row{
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--line); background:#fff;
+  }
+  .list-row.active{ border-color:var(--green); background:rgba(31,122,77,0.06); }
+  .list-row-name{ flex:1; font-size:13px; color:var(--ink); cursor:pointer; font-weight:500; }
+  .list-row-name:hover{ color:var(--pink-deep); }
+  .list-row-count{ font-size:10.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; white-space:nowrap; }
+  .list-rename-btn, .list-delete-btn{ background:none; border:none; cursor:pointer; color:var(--muted); font-size:14px; padding:2px 4px; }
+  .list-rename-btn:hover, .list-delete-btn:hover{ color:var(--pink-deep); }
+  .new-list-row{ display:flex; gap:8px; }
+  .new-list-row input{
+    flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:13px; color:var(--ink);
+  }
+  .new-list-row button{
+    background:var(--ink); color:var(--paper); border:none; border-radius:8px;
+    padding:0 14px; font-size:13px; font-weight:600; cursor:pointer;
+  }
   .list-header-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .clear-btn, .recheck-btn{ background:none; border:none; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer; padding:0; font-family:'Inter',sans-serif; }
   .clear-btn:hover, .recheck-btn:hover{ color:var(--pink-deep); }
@@ -257,6 +283,100 @@
   .budget-edit-row button:last-child{ background:#fff; border:1px solid var(--line) !important; color:var(--ink-soft); }
 
   .time-estimate{ margin:8px 26px 0; font-size:11px; color:var(--muted); }
+
+  .shopping-mode-btn{
+    display:block; width:calc(100% - 52px); margin:14px 26px 0; padding:13px;
+    background:linear-gradient(160deg, var(--pink), var(--pink-deep)); color:var(--paper);
+    border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .shopping-mode-btn:hover{ filter:brightness(1.05); }
+
+  /* Shopping Mode — big touch targets, high contrast, one-handed reach.
+     This is the "ten minutes in the aisles" view, deliberately built to
+     look and feel nothing like the list-building view. */
+  .shopping-mode-overlay{
+    display:none; position:fixed; inset:0; background:var(--paper); z-index:200;
+    flex-direction:column;
+  }
+  .shopping-mode-overlay.open{ display:flex; }
+  .shopping-mode-header{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:16px 18px; background:var(--ink); color:var(--paper); flex-shrink:0;
+  }
+  .shopping-exit-btn{
+    background:var(--pink); color:var(--paper); border:none; border-radius:10px;
+    padding:11px 16px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .shopping-mode-title{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; }
+  .shopping-mode-count{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; white-space:nowrap; }
+  .shopping-mode-list{ flex:1; overflow-y:auto; padding:14px; -webkit-overflow-scrolling:touch; }
+  .shopping-aisle-divider{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.06em; padding:14px 4px 6px; font-weight:600;
+  }
+  .shopping-aisle-divider:first-child{ padding-top:2px; }
+  .shopping-item-row{
+    display:flex; align-items:center; gap:14px; padding:16px 14px; border-radius:14px;
+    margin-bottom:10px; background:#fff; border:2px solid var(--line); cursor:pointer;
+    transition:background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  }
+  .shopping-item-row.picked{ background:rgba(31,122,77,0.08); border-color:var(--green); opacity:0.65; }
+  .shopping-item-checkbox{
+    width:34px; height:34px; border-radius:50%; border:3px solid var(--line); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; color:var(--paper);
+  }
+  .shopping-item-row.picked .shopping-item-checkbox{ background:var(--green); border-color:var(--green); }
+  .shopping-item-checkbox svg{ width:18px; height:18px; opacity:0; }
+  .shopping-item-row.picked .shopping-item-checkbox svg{ opacity:1; }
+  .shopping-item-info{ flex:1; min-width:0; }
+  .shopping-item-name{ font-size:17px; font-weight:700; color:var(--ink); line-height:1.3; }
+  .shopping-item-row.picked .shopping-item-name{ text-decoration:line-through; color:var(--muted); }
+  .shopping-item-meta{ font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.4; }
+  .shopping-item-price{ font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:700; color:var(--ink); flex-shrink:0; white-space:nowrap; }
+  .shopping-mode-footer{
+    padding:14px 20px; border-top:2px solid var(--line); background:var(--paper-dim);
+    font-size:13.5px; font-weight:600; color:var(--ink-soft); text-align:center; flex-shrink:0;
+  }
+
+  /* First-run tutorial */
+  .tutorial-overlay{
+    display:none; position:fixed; inset:0; background:rgba(20,23,28,0.92); z-index:300;
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .tutorial-overlay.open{ display:flex; }
+  .tutorial-card{
+    background:var(--paper); border-radius:16px; padding:30px 24px 24px; max-width:380px;
+    width:100%; text-align:center; position:relative;
+  }
+  .tutorial-skip{
+    position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted);
+    font-size:12px; cursor:pointer; text-decoration:underline; font-family:'Inter',sans-serif;
+  }
+  .tutorial-skip:hover{ color:var(--pink-deep); }
+  .tutorial-icon{ font-size:46px; margin-bottom:12px; line-height:1; }
+  .tutorial-title{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; margin-bottom:10px; color:var(--ink); }
+  .tutorial-body{ font-size:14px; color:var(--ink-soft); line-height:1.6; margin-bottom:22px; }
+  .tutorial-dots{ display:flex; justify-content:center; gap:6px; margin-bottom:22px; }
+  .tutorial-dot{ width:7px; height:7px; border-radius:50%; background:var(--line); transition:all 0.2s ease; }
+  .tutorial-dot.active{ background:var(--pink); width:18px; border-radius:4px; }
+  .tutorial-nav{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tutorial-back{
+    background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer;
+    font-weight:600; font-family:'Inter',sans-serif;
+  }
+  .tutorial-back:hover{ color:var(--pink-deep); }
+  .tutorial-progress{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); }
+  .tutorial-next{
+    background:var(--pink); color:var(--paper); border:none; border-radius:20px;
+    padding:11px 22px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .tutorial-next:hover{ background:var(--pink-deep); }
+  .replay-tutorial-btn{
+    background:none; border:none; color:var(--muted); font-size:10.5px; text-decoration:underline;
+    cursor:pointer; padding:0; margin-top:10px; display:block; font-family:'IBM Plex Mono',monospace;
+  }
+  .replay-tutorial-btn:hover{ color:var(--pink-deep); }
 
   .budget-alert{ background:rgba(255,77,109,0.1); border-color:var(--pink); }
 
@@ -337,6 +457,10 @@
     display:inline-block; margin-top:3px; font-family:'IBM Plex Mono',monospace; font-size:9.5px;
     color:var(--muted); background:var(--paper-dim); border-radius:4px; padding:1px 5px;
   }
+  .price-history{
+    font-size:10.5px; color:var(--muted); margin-top:4px; font-family:'IBM Plex Mono',monospace;
+  }
+  .price-history.steady{ color:var(--green); }
   .option-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; white-space:nowrap; }
   .option-price .was{ color:var(--muted); text-decoration:line-through; font-weight:500; font-size:10.5px; margin-left:4px; }
   .option-price.cheapest{ color:var(--green); }
@@ -534,6 +658,32 @@
       <div id="modalContent"></div>
     </div>
   </div>
+
+  <div class="tutorial-overlay" id="tutorialOverlay">
+    <div class="tutorial-card">
+      <button class="tutorial-skip" id="tutorialSkipBtn">Skip</button>
+      <div class="tutorial-icon" id="tutorialIcon">👋</div>
+      <div class="tutorial-title" id="tutorialTitle"></div>
+      <div class="tutorial-body" id="tutorialBody"></div>
+      <div class="tutorial-dots" id="tutorialDots"></div>
+      <div class="tutorial-nav">
+        <button class="tutorial-back" id="tutorialBackBtn">← Back</button>
+        <span class="tutorial-progress" id="tutorialProgress"></span>
+        <button class="tutorial-next" id="tutorialNextBtn">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shopping-mode-overlay" id="shoppingModeOverlay">
+    <div class="shopping-mode-header">
+      <button class="shopping-exit-btn" id="shoppingExitBtn">✕ Exit</button>
+      <div class="shopping-mode-title">🛒 Shopping Mode</div>
+      <div class="shopping-mode-count" id="shoppingModeCount">0/0</div>
+    </div>
+    <div class="shopping-mode-list" id="shoppingModeList"></div>
+    <div class="shopping-mode-footer" id="shoppingModeFooter"></div>
+  </div>
+
   <div class="receipt">
     <header>
       <div class="top-row">
@@ -595,7 +745,8 @@
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
         <br><br><strong>About your location:</strong> Blurt doesn't remember it between visits, so if it's been about an hour the location bar will gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
-        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
+        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), "start/exit shopping mode", and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
+        <button class="replay-tutorial-btn" id="replayTutorialBtn">▶ replay the welcome tutorial</button>
       </div>
     </header>
 
@@ -651,7 +802,7 @@
     </div>
 
     <div class="list-header">
-      <h2>Your list</h2>
+      <button class="list-switcher" id="listSwitcherBtn">📋 <span id="activeListName">My List</span> <span class="list-switcher-caret">▾</span></button>
       <div class="list-header-actions">
         <button class="recheck-btn" id="readAloudBtn">🔊 read list aloud</button>
         <button class="recheck-btn" id="pickCheapestAll">pick cheapest for all</button>
@@ -685,6 +836,7 @@
       <button id="budgetClearBtn">Clear</button>
     </div>
     <div class="time-estimate" id="timeEstimateRow" style="display:none;"></div>
+    <button class="shopping-mode-btn" id="startShoppingModeBtn">🛒 Start Shopping Mode</button>
     <div class="list" id="list"></div>
     </div>
 
@@ -733,7 +885,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.10.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.11.0</span></footer>
 </div>
 
 <script type="module">
@@ -781,6 +933,8 @@
 <script>
 (function(){
   const LIST_KEY = 'blurt:items';
+  const LISTS_KEY = 'blurt:savedLists';
+  const ACTIVE_LIST_KEY = 'blurt:activeListId';
   const SETTINGS_KEY = 'blurt:settings';
   const LOCATION_KEY = 'blurt:location'; // sessionStorage, not localStorage — see note below
   const RECIPES_KEY = 'blurt:recipes';
@@ -811,6 +965,8 @@
   var recipeFilter = 'all'; // 'all' | 'recipe' | 'list'
   var expandedRecipeIds = {}; // runtime-only UI state, not persisted
   var currentUser = null; // Google account, if signed in — null means fully local/device-only
+  var savedLists = []; // [{id, name, items, updatedAt}] — multiple named shopping lists
+  var activeListId = null; // which savedLists entry `items` currently mirrors
   var cloudSyncTimer = null;
 
   function fmt(n){ return '$' + Number(n).toFixed(2); }
@@ -851,9 +1007,22 @@
     return '';
   }
 
+  function persistLists(){
+    try{ localStorage.setItem(LISTS_KEY, JSON.stringify(savedLists)); }catch(e){}
+    scheduleCloudSync();
+  }
+  function saveActiveListId(){
+    try{ localStorage.setItem(ACTIVE_LIST_KEY, activeListId); }catch(e){}
+  }
+
   function saveList(){
     try{ localStorage.setItem(LIST_KEY, JSON.stringify(items)); }catch(e){}
-    scheduleCloudSync();
+    // Keep the active list's stored snapshot in sync — reads the *current*
+    // value of `items` each time, so it stays correct even after code
+    // elsewhere reassigns items to a brand-new array (e.g. items = items.filter(...)).
+    var active = savedLists.find(function(l){ return l.id === activeListId; });
+    if(active){ active.items = items; active.updatedAt = Date.now(); }
+    persistLists();
   }
   function saveSettings(){
     try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
@@ -864,9 +1033,34 @@
   }
   function loadAll(){
     try{
-      var raw = localStorage.getItem(LIST_KEY);
-      if(raw){ try{ items = JSON.parse(raw); }catch(e){ items = []; } }
+      var rawLists = localStorage.getItem(LISTS_KEY);
+      if(rawLists){
+        try{ savedLists = JSON.parse(rawLists); }catch(e){ savedLists = []; }
+      }
     }catch(e){}
+
+    if(savedLists.length === 0){
+      // First time on this device, or upgrading from before multi-list
+      // support existed — wrap whatever's already in LIST_KEY as "My List"
+      // rather than losing it.
+      var existingItems = [];
+      try{
+        var raw = localStorage.getItem(LIST_KEY);
+        if(raw){ existingItems = JSON.parse(raw); }
+      }catch(e){}
+      savedLists = [{ id: 'default', name: 'My List', items: existingItems || [], updatedAt: Date.now() }];
+      activeListId = 'default';
+      persistLists();
+      saveActiveListId();
+    } else {
+      var storedActiveId = null;
+      try{ storedActiveId = localStorage.getItem(ACTIVE_LIST_KEY); }catch(e){}
+      var active = savedLists.find(function(l){ return l.id === storedActiveId; }) || savedLists[0];
+      activeListId = active.id;
+    }
+    var activeList = savedLists.find(function(l){ return l.id === activeListId; });
+    items = (activeList && activeList.items) ? activeList.items.slice() : [];
+
     try{
       var rawSettings = localStorage.getItem(SETTINGS_KEY);
       if(rawSettings){
@@ -883,6 +1077,7 @@
     }catch(e){}
     document.getElementById('backendUrl').value = settings.backendUrl || '';
     updateLocationDisplay();
+    updateActiveListIndicator();
     render();
     renderRecipeList();
     // Quietly recheck resolved items' prices in the background, staggered
@@ -1108,7 +1303,7 @@
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
         betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null, editingName: false, skipped: false
+        budgetNotice: null, editingName: false, skipped: false, priceHistory: []
       };
       items.unshift(item);
       if(item.status === 'loading') fetchOptions(item.id);
@@ -1158,6 +1353,11 @@
 
       var selected = newResults.find(function(p){ return p.productId === it.selectedProductId; });
       var selectedPrice = selected ? (selected.promoPrice || selected.regularPrice) : null;
+      if(selectedPrice !== null){
+        if(!it.priceHistory) it.priceHistory = [];
+        it.priceHistory.push({ price: selectedPrice, checkedAt: Date.now() });
+        if(it.priceHistory.length > 10) it.priceHistory = it.priceHistory.slice(-10);
+      }
       var cheapest = newResults.reduce(function(min, p){
         var price = p.promoPrice || p.regularPrice;
         return (min === null || price < min.price) ? { price: price, productId: p.productId } : min;
@@ -1258,6 +1458,7 @@
     it.expanded = false;
     it.betterPriceAvailable = false;
     it.dismissedBetterPrice = null;
+    it.priceHistory = [{ price: it.priceAtSelection, checkedAt: Date.now() }];
     if(!it.qty) it.qty = 1;
 
     // Gentle nudge: only fires the moment a pick actually crosses you over
@@ -1297,8 +1498,104 @@
   }
   function togglePicked(id){
     var it = items.find(function(i){ return i.id === id; });
-    if(it){ it.picked = !it.picked; saveList(); render(); }
+    if(it){ it.picked = !it.picked; saveList(); render(); if(shoppingMode) renderShoppingMode(); }
   }
+
+  // ---------- Shopping Mode ----------
+  var shoppingMode = false;
+  var wakeLockSentinel = null;
+
+  function requestWakeLock(){
+    if('wakeLock' in navigator){
+      navigator.wakeLock.request('screen').then(function(lock){ wakeLockSentinel = lock; }).catch(function(){ /* not critical if unsupported/denied */ });
+    }
+  }
+  function releaseWakeLock(){
+    if(wakeLockSentinel){
+      try{ wakeLockSentinel.release(); }catch(e){}
+      wakeLockSentinel = null;
+    }
+  }
+  document.addEventListener('visibilitychange', function(){
+    // Browsers auto-release the wake lock when the tab is hidden — reacquire
+    // it if we're still in Shopping Mode when the person comes back.
+    if(document.visibilityState === 'visible' && shoppingMode) requestWakeLock();
+  });
+
+  function enterShoppingMode(){
+    var resolvedCount = items.filter(function(i){ return i.status === 'resolved'; }).length;
+    if(resolvedCount === 0){
+      window.alert('Nothing ready to shop for yet — pick a price for at least one item first.');
+      return;
+    }
+    shoppingMode = true;
+    document.getElementById('shoppingModeOverlay').classList.add('open');
+    requestWakeLock();
+    renderShoppingMode();
+  }
+  function exitShoppingMode(){
+    shoppingMode = false;
+    document.getElementById('shoppingModeOverlay').classList.remove('open');
+    releaseWakeLock();
+  }
+  document.getElementById('startShoppingModeBtn').addEventListener('click', enterShoppingMode);
+  document.getElementById('shoppingExitBtn').addEventListener('click', exitShoppingMode);
+
+  function renderShoppingMode(){
+    var resolved = items.filter(function(i){ return i.status === 'resolved'; });
+    resolved.sort(function(a,b){
+      var pa = selectedProduct(a), pb = selectedProduct(b);
+      var aa = (pa && pa.aisleNumber) ? parseInt(pa.aisleNumber, 10) : 9999;
+      var bb = (pb && pb.aisleNumber) ? parseInt(pb.aisleNumber, 10) : 9999;
+      if(isNaN(aa)) aa = 9999;
+      if(isNaN(bb)) bb = 9999;
+      return aa - bb;
+    });
+
+    var pickedCount = resolved.filter(function(i){ return i.picked; }).length;
+    document.getElementById('shoppingModeCount').textContent = pickedCount + '/' + resolved.length + ' picked up';
+
+    var lastAisle = 'unset';
+    var html = resolved.map(function(it){
+      var p = selectedProduct(it);
+      var aisle = (p && p.aisleNumber) ? p.aisleNumber : null;
+      var dividerHtml = '';
+      if(aisle !== lastAisle){
+        dividerHtml = '<div class="shopping-aisle-divider">' + (aisle ? 'Aisle ' + escapeHtml(aisle) : 'Aisle unknown') + '</div>';
+        lastAisle = aisle;
+      }
+      var price = p ? (p.promoPrice || p.regularPrice) : 0;
+      var metaText = p ? ((p.brand ? p.brand + ' — ' : '') + p.description) : '';
+      return dividerHtml + '<div class="shopping-item-row' + (it.picked ? ' picked' : '') + '" data-shopping-toggle="' + it.id + '">' +
+        '<div class="shopping-item-checkbox">' + iconCheck() + '</div>' +
+        '<div class="shopping-item-info">' +
+          '<div class="shopping-item-name">' + escapeHtml(it.query) + '</div>' +
+          '<div class="shopping-item-meta">' + escapeHtml(metaText) + (it.qty > 1 ? ' · qty ' + it.qty : '') + '</div>' +
+        '</div>' +
+        '<div class="shopping-item-price">' + fmt(price * it.qty) + '</div>' +
+      '</div>';
+    }).join('');
+
+    var listEl = document.getElementById('shoppingModeList');
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('[data-shopping-toggle]').forEach(function(row){
+      row.addEventListener('click', function(){ togglePicked(row.getAttribute('data-shopping-toggle')); });
+    });
+
+    var footer = document.getElementById('shoppingModeFooter');
+    if(resolved.length > 0 && pickedCount === resolved.length){
+      footer.textContent = '🎉 All done — everything is picked up!';
+    } else {
+      var totalPrice = computeResolvedTotal();
+      var footerText = 'Total: ' + fmt(totalPrice);
+      if(settings.budget !== null && settings.budget !== undefined){
+        var remaining = settings.budget - totalPrice;
+        footerText += remaining < 0 ? ' · ' + fmt(Math.abs(remaining)) + ' over budget' : ' · ' + fmt(remaining) + ' left';
+      }
+      footer.textContent = footerText;
+    }
+  }
+
   function skipItem(id){
     var it = items.find(function(i){ return i.id === id; });
     if(it){ it.skipped = true; saveList(); render(); }
@@ -1421,6 +1718,8 @@
       { patterns: ['go to recipes', 'open recipes', 'find a recipe', 'search for a recipe', 'search recipes'], action: function(){ setActiveTab('search'); document.getElementById('recipeSearchInput').focus(); } },
       { patterns: ['go to shopping', 'go to shop', 'go shopping', 'open shopping list', 'switch to shopping'], action: function(){ setActiveTab('shop'); } },
       { patterns: ['go to saved', 'open saved recipes', 'show my saved recipes', 'show saved lists'], action: function(){ setActiveTab('saved'); } },
+      { patterns: ['start shopping mode', 'shopping mode', "let's shop", 'lets shop', 'im shopping', "i'm shopping"], action: enterShoppingMode },
+      { patterns: ['exit shopping mode', 'stop shopping mode', 'done shopping', 'im done shopping', "i'm done shopping"], action: exitShoppingMode },
       { patterns: ['surprise me', 'random recipe', 'surprise me with a recipe', 'pick a recipe for me', 'choose a recipe for me', 'roll a recipe'], action: function(){ setActiveTab('search'); document.getElementById('randomCategorySelect').value = 'any'; rollRandomRecipe(); } }
     ];
     for(var i = 0; i < commandTable.length; i++){
@@ -1561,6 +1860,7 @@
         '<div class="chosen-info">' +
         '<div class="chosen-desc clickable-name" data-view-detail="' + it.id + '|' + product.productId + '">' + descLine + (product.size ? '<small>' + escapeHtml(product.size) + '</small>' : '') + '</div>' +
         aisleTagHtml(product) +
+        priceHistoryHtml(it) +
         '<div class="chosen-meta">' +
           '<div class="qty-stepper">' +
             '<button class="qty-btn" data-qty-minus="' + it.id + '">−</button>' +
@@ -1571,6 +1871,18 @@
         '</div>' +
         '<button class="change-link" data-toggle-expand="' + it.id + '">change option</button>' +
       '</div></div>';
+  }
+
+  function priceHistoryHtml(it){
+    var history = it.priceHistory;
+    if(!history || history.length < 2) return '';
+    var prices = history.map(function(h){ return h.price; });
+    var min = Math.min.apply(null, prices);
+    var max = Math.max.apply(null, prices);
+    if(Math.abs(max - min) < PRICE_EPSILON){
+      return '<div class="price-history steady">Steady at ' + fmt(min) + ' across ' + history.length + ' checks</div>';
+    }
+    return '<div class="price-history">Ranged ' + fmt(min) + '–' + fmt(max) + ' over the last ' + history.length + ' checks</div>';
   }
 
   function displayOrder(){
@@ -1674,6 +1986,107 @@
     document.getElementById('previewAddBtn').addEventListener('click', function(){ quickAddMealToShop(meal.idMeal); closeModal(); });
     document.getElementById('previewSaveBtn').addEventListener('click', function(){ toggleSaveMeal(meal.idMeal); closeModal(); });
   }
+
+  // ---------- Multiple named lists ----------
+  function updateActiveListIndicator(){
+    var el = document.getElementById('activeListName');
+    if(!el) return;
+    var active = savedLists.find(function(l){ return l.id === activeListId; });
+    el.textContent = active ? active.name : 'My List';
+  }
+
+  function switchToList(id){
+    var target = savedLists.find(function(l){ return l.id === id; });
+    if(!target) return;
+    activeListId = id;
+    items = (target.items || []).slice();
+    saveActiveListId();
+    render();
+    updateActiveListIndicator();
+    closeModal();
+  }
+
+  function createNewList(){
+    var input = document.getElementById('newListNameInput');
+    var name = input.value.trim();
+    if(!name){ input.focus(); return; }
+    var newList = { id: 'l'+Date.now()+Math.random().toString(36).slice(2,7), name: name, items: [], updatedAt: Date.now() };
+    savedLists.push(newList);
+    persistLists();
+    switchToList(newList.id); // also closes the modal, landing you right in the new list
+  }
+
+  function renameList(id){
+    var l = savedLists.find(function(x){ return x.id === id; });
+    if(!l) return;
+    var newName = window.prompt('Rename list:', l.name);
+    if(newName === null) return;
+    newName = newName.trim();
+    if(!newName) return;
+    l.name = newName;
+    persistLists();
+    renderListsModalContent();
+    updateActiveListIndicator();
+  }
+
+  function deleteList(id){
+    if(savedLists.length <= 1){
+      window.alert('You need at least one list — create another before deleting this one.');
+      return;
+    }
+    var l = savedLists.find(function(x){ return x.id === id; });
+    if(!l) return;
+    var ok = window.confirm('Delete "' + l.name + '" and all ' + l.items.length + ' item' + (l.items.length===1?'':'s') + ' in it? This cannot be undone.');
+    if(!ok) return;
+    var wasActive = (id === activeListId);
+    savedLists = savedLists.filter(function(x){ return x.id !== id; });
+    persistLists();
+    if(wasActive){
+      activeListId = savedLists[0].id;
+      items = (savedLists[0].items || []).slice();
+      saveActiveListId();
+      render();
+      updateActiveListIndicator();
+    }
+    renderListsModalContent();
+  }
+
+  function renderListsModalContent(){
+    var rowsHtml = savedLists.map(function(l){
+      return '<div class="list-row' + (l.id === activeListId ? ' active' : '') + '">' +
+        '<span class="list-row-name" data-switch-list="' + l.id + '">' + escapeHtml(l.name) + '</span>' +
+        '<span class="list-row-count">' + l.items.length + ' item' + (l.items.length===1?'':'s') + '</span>' +
+        '<button class="list-rename-btn" data-rename-list="' + l.id + '" title="Rename">✎</button>' +
+        '<button class="list-delete-btn" data-delete-list="' + l.id + '" title="Delete">×</button>' +
+      '</div>';
+    }).join('');
+    var html = '<div class="modal-detail-name">Your Lists</div>' +
+      '<div class="lists-modal-rows">' + rowsHtml + '</div>' +
+      '<div class="new-list-row">' +
+        '<input type="text" id="newListNameInput" placeholder="New list name" maxlength="60">' +
+        '<button id="newListCreateBtn">+ Create</button>' +
+      '</div>';
+    if(modalOverlay.classList.contains('open')){
+      modalContent.innerHTML = html;
+    } else {
+      openModal(html);
+    }
+    document.querySelectorAll('[data-switch-list]').forEach(function(el){
+      el.addEventListener('click', function(){ switchToList(el.getAttribute('data-switch-list')); });
+    });
+    document.querySelectorAll('[data-rename-list]').forEach(function(el){
+      el.addEventListener('click', function(){ renameList(el.getAttribute('data-rename-list')); });
+    });
+    document.querySelectorAll('[data-delete-list]').forEach(function(el){
+      el.addEventListener('click', function(){ deleteList(el.getAttribute('data-delete-list')); });
+    });
+    var createBtn = document.getElementById('newListCreateBtn');
+    var nameInput = document.getElementById('newListNameInput');
+    if(createBtn) createBtn.addEventListener('click', createNewList);
+    if(nameInput) nameInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') createNewList(); });
+  }
+
+  document.getElementById('listSwitcherBtn').addEventListener('click', renderListsModalContent);
 
   // Global delegation for image/detail clicks — these appear inside
   // dynamically-rendered list HTML, so a single document-level listener
@@ -1913,7 +2326,7 @@
     if(!currentUser || !window.BlurtCloud) return;
     clearTimeout(cloudSyncTimer);
     cloudSyncTimer = setTimeout(function(){
-      window.BlurtCloud.saveData(currentUser.uid, { items: items, recipes: recipes, settings: settings }).catch(function(){});
+      window.BlurtCloud.saveData(currentUser.uid, { items: items, recipes: recipes, settings: settings, savedLists: savedLists, activeListId: activeListId }).catch(function(){});
     }, 1500);
   }
 
@@ -1963,21 +2376,32 @@
     window.BlurtCloud.loadData(user.uid).then(function(cloudData){
       if(cloudData){
         // Existing cloud data found — it becomes the source of truth on this device.
-        items = cloudData.items || [];
         recipes = cloudData.recipes || [];
         if(cloudData.settings) settings = Object.assign(settings, cloudData.settings);
+        if(cloudData.savedLists && cloudData.savedLists.length){
+          savedLists = cloudData.savedLists;
+          activeListId = cloudData.activeListId && savedLists.some(function(l){ return l.id === cloudData.activeListId; })
+            ? cloudData.activeListId : savedLists[0].id;
+          items = (savedLists.find(function(l){ return l.id === activeListId; }).items || []).slice();
+          try{ localStorage.setItem(LISTS_KEY, JSON.stringify(savedLists)); }catch(e){}
+          saveActiveListId();
+        } else {
+          // Older cloud data from before multi-list support — fall back to its flat items array.
+          items = cloudData.items || [];
+        }
         try{ localStorage.setItem(LIST_KEY, JSON.stringify(items)); }catch(e){}
         try{ localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes)); }catch(e){}
         try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
         document.getElementById('backendUrl').value = settings.backendUrl || '';
         render();
         renderRecipeList();
+        updateActiveListIndicator();
         msg.className = 'backup-msg ok';
         msg.textContent = 'Synced from your account.';
       } else {
         // First time this account has signed in — upload whatever is on
         // this device now as the starting point, rather than losing it.
-        window.BlurtCloud.saveData(user.uid, { items: items, recipes: recipes, settings: settings }).then(function(){
+        window.BlurtCloud.saveData(user.uid, { items: items, recipes: recipes, settings: settings, savedLists: savedLists, activeListId: activeListId }).then(function(){
           msg.className = 'backup-msg ok';
           msg.textContent = "This device's data is now backed up to your account.";
         }).catch(function(err){
@@ -2028,7 +2452,9 @@
       appVersion: document.getElementById('versionTag').textContent,
       items: items,
       recipes: recipes,
-      settings: settings
+      settings: settings,
+      savedLists: savedLists,
+      activeListId: activeListId
       // Deliberately excludes location — Kroger's Acceptable Use policy prohibits
       // storing customer location data, and a downloadable backup file would just
       // relocate that same problem rather than solve it.
@@ -2065,14 +2491,24 @@
         msg.textContent = 'Could not read that file — it does not look like a valid backup.';
         return;
       }
-      if(!data || typeof data !== 'object' || (!data.items && !data.recipes)){
+      if(!data || typeof data !== 'object' || (!data.items && !data.recipes && !data.savedLists)){
         msg.className = 'backup-msg err';
         msg.textContent = 'That file does not look like a Blurt backup.';
         return;
       }
-      var ok = window.confirm('Import this backup? It will replace your current list, recipes, and settings on this device.');
+      var ok = window.confirm('Import this backup? It will replace your current lists, recipes, and settings on this device.');
       if(!ok){ e.target.value = ''; return; }
       try{
+        if(data.savedLists && data.savedLists.length){
+          localStorage.setItem(LISTS_KEY, JSON.stringify(data.savedLists));
+          var restoredActiveId = data.activeListId && data.savedLists.some(function(l){ return l.id === data.activeListId; })
+            ? data.activeListId : data.savedLists[0].id;
+          localStorage.setItem(ACTIVE_LIST_KEY, restoredActiveId);
+        } else if(data.items){
+          // Older backup from before multi-list support — wrap as a single list.
+          localStorage.setItem(LISTS_KEY, JSON.stringify([{ id: 'default', name: 'My List', items: data.items, updatedAt: Date.now() }]));
+          localStorage.setItem(ACTIVE_LIST_KEY, 'default');
+        }
         if(data.items) localStorage.setItem(LIST_KEY, JSON.stringify(data.items));
         if(data.recipes) localStorage.setItem(RECIPES_KEY, JSON.stringify(data.recipes));
         if(data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
@@ -2285,7 +2721,7 @@
         results: null, sortOrder: 'asc', storeInfo: null, errorMsg: null, showAllOptions: false,
         selectedProductId: null, priceAtSelection: null, qty: 1, expanded: true, picked: false,
         betterPriceAvailable: false, betterPrice: null, betterProductId: null, dismissedBetterPrice: null,
-        budgetNotice: null, editingName: false, skipped: false
+        budgetNotice: null, editingName: false, skipped: false, priceHistory: []
       };
       items.unshift(item);
       if(item.status === 'loading') fetchOptions(item.id);
@@ -2600,6 +3036,59 @@
     if(document.visibilityState === 'visible') updateLocationDisplay();
   });
   setInterval(updateLocationDisplay, 5 * 60 * 1000);
+
+  // ---------- First-run tutorial ----------
+  var TUTORIAL_SEEN_KEY = 'blurt:tutorialSeen';
+  var TUTORIAL_STEPS = [
+    { icon: '👋', title: 'Welcome to Blurt', body: 'Say it before you forget it. Talk or type what you need, and Blurt finds real prices at your nearest Kroger-family store.' },
+    { icon: '🎤', title: 'Just talk', body: 'Tap the mic and say what you need — even a few things at once, like "carrots and potatoes." Typing works the same way.' },
+    { icon: '💰', title: 'Real prices, your choice', body: 'Blurt shows real options from the store. Pick one, or tap "pick cheapest for all" to skip making a decision on every single item.' },
+    { icon: '📊', title: 'Stay on budget', body: 'Set a budget and Blurt gently lets you know if a pick pushes you over — no blocking, just a heads up right when it happens.' },
+    { icon: '🍳', title: 'Cook something, shop for it', body: 'Search a recipe or build your own list, then send every ingredient straight to your shopping list in one tap.' },
+    { icon: '🛒', title: 'When you\u2019re actually shopping', body: 'Tap "Start Shopping Mode" for a big, simple, walk-the-aisles view — sorted by aisle when we know it, easy to tap with one hand.' },
+    { icon: '🏪', title: 'Built for the Kroger family', body: 'Fred Meyer, QFC, Ralphs, and more — Blurt sticks to one family of stores on purpose, so every price is real, never guessed.' },
+    { icon: '✅', title: 'That\u2019s the basics', body: 'Tap the ⓘ info button anytime for the full rundown, or the feedback button if something\u2019s off. You\u2019re ready — let\u2019s go.' }
+  ];
+  var tutorialStepIndex = 0;
+
+  function renderTutorialStep(){
+    var step = TUTORIAL_STEPS[tutorialStepIndex];
+    var isLast = tutorialStepIndex === TUTORIAL_STEPS.length - 1;
+    var isFirst = tutorialStepIndex === 0;
+    document.getElementById('tutorialIcon').textContent = step.icon;
+    document.getElementById('tutorialTitle').textContent = step.title;
+    document.getElementById('tutorialBody').textContent = step.body;
+    document.getElementById('tutorialProgress').textContent = (tutorialStepIndex + 1) + ' of ' + TUTORIAL_STEPS.length;
+    document.getElementById('tutorialBackBtn').style.visibility = isFirst ? 'hidden' : 'visible';
+    document.getElementById('tutorialNextBtn').textContent = isLast ? "Let's go →" : 'Next →';
+    document.getElementById('tutorialDots').innerHTML = TUTORIAL_STEPS.map(function(_, i){
+      return '<span class="tutorial-dot' + (i === tutorialStepIndex ? ' active' : '') + '"></span>';
+    }).join('');
+  }
+
+  function openTutorial(){
+    tutorialStepIndex = 0;
+    document.getElementById('tutorialOverlay').classList.add('open');
+    renderTutorialStep();
+  }
+  function closeTutorial(){
+    document.getElementById('tutorialOverlay').classList.remove('open');
+    try{ localStorage.setItem(TUTORIAL_SEEN_KEY, '1'); }catch(e){}
+  }
+  document.getElementById('tutorialNextBtn').addEventListener('click', function(){
+    if(tutorialStepIndex === TUTORIAL_STEPS.length - 1){ closeTutorial(); return; }
+    tutorialStepIndex++;
+    renderTutorialStep();
+  });
+  document.getElementById('tutorialBackBtn').addEventListener('click', function(){
+    if(tutorialStepIndex > 0){ tutorialStepIndex--; renderTutorialStep(); }
+  });
+  document.getElementById('tutorialSkipBtn').addEventListener('click', closeTutorial);
+  document.getElementById('replayTutorialBtn').addEventListener('click', openTutorial);
+
+  var tutorialAlreadySeen = false;
+  try{ tutorialAlreadySeen = localStorage.getItem(TUTORIAL_SEEN_KEY) === '1'; }catch(e){}
+  if(!tutorialAlreadySeen) openTutorial();
 
   updateSyncBanner();
   loadAll();
