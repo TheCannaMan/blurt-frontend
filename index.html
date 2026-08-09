@@ -202,6 +202,7 @@
   .location-msg{ margin-top:8px; font-size:11px; line-height:1.5; }
   .location-msg.ok{ color:var(--green); }
   .location-msg.err{ color:var(--pink-deep); }
+  .location-msg.info{ color:var(--ink-soft); }
 
   .mic-zone{
     padding:28px 26px 22px; display:flex; flex-direction:column; align-items:center;
@@ -443,6 +444,7 @@
   .spinner{ width:9px; height:9px; border-radius:50%; border:1.5px solid var(--line); border-top-color:var(--pink); animation:spin 0.8s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg);} }
   .search-error{ font-size:12px; color:var(--pink-deep); background:rgba(255,77,109,0.08); border-radius:7px; padding:9px 11px; line-height:1.5; max-width:320px; }
+  .search-error.info{ color:var(--ink-soft); background:var(--paper-dim); }
   .retry-btn{ margin-top:6px; background:none; border:1px dashed var(--line); border-radius:12px; font-size:11px; padding:4px 10px; cursor:pointer; color:var(--ink-soft); }
   .retry-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
   .setup-needed{ font-size:12px; color:var(--muted); background:var(--paper-dim); border:1px dashed var(--line); border-radius:8px; padding:9px 11px; line-height:1.5; max-width:320px; }
@@ -759,6 +761,7 @@
       </div>
 
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
+      <a class="info-btn" href="/privacy.html" style="display:block;margin-top:6px;">privacy &amp; terms →</a>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
         <br><br><strong>About your location:</strong> If you check "remember this ZIP" when setting your location, Blurt will bring it back automatically each time you open the app — nothing more precise than your ZIP is ever saved, and you can uncheck that box anytime. If it's been about an hour since your location was last checked, the location bar will still gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
@@ -906,7 +909,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.13.2</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.14.0</span></footer>
 </div>
 
 <script type="module">
@@ -1069,6 +1072,25 @@
   function hasLocation(){ return !!(location.zip || (location.lat && location.lon)); }
   function isConfigured(){ return !!(settings.backendUrl && hasLocation()); }
 
+  // Distinguishes "Kroger genuinely doesn't have stores near you" from a
+  // real failure (network, bad request, etc.) so the UI can show the former
+  // calmly instead of looking like something broke — matches the backend's
+  // NO_STORE_MSG wording.
+  function isGeographicGap(text){
+    return !!(text && text.indexOf('outside their footprint') !== -1);
+  }
+  function renderLocationMsg(elId, err){
+    var msg = document.getElementById(elId);
+    var text = (err && err.message) || 'Something went wrong.';
+    if(isGeographicGap(text)){
+      msg.className = 'location-msg info';
+      msg.textContent = text;
+    } else {
+      msg.className = 'location-msg err';
+      msg.textContent = text;
+    }
+  }
+
   function locationQueryPart(){
     if(location.zip) return 'zip=' + encodeURIComponent(location.zip);
     if(location.lat && location.lon) return 'lat=' + encodeURIComponent(location.lat) + '&lon=' + encodeURIComponent(location.lon);
@@ -1217,8 +1239,7 @@
       msg.textContent = 'Found ' + body.name + '.';
       locationEdit.classList.remove('open');
     }).catch(function(err){
-      msg.className = 'location-msg err';
-      msg.textContent = 'Could not find a store: ' + err.message;
+      renderLocationMsg('locationMsg', err);
     });
   }
 
@@ -1248,8 +1269,7 @@
       msg.className = 'location-msg ok';
       msg.textContent = 'Welcome back — ' + body.name + '.';
     }).catch(function(err){
-      msg.className = 'location-msg err';
-      msg.textContent = 'Could not restore your usual store: ' + err.message;
+      renderLocationMsg('locationMsg', err);
     });
   }
 
@@ -1278,8 +1298,7 @@
         msg.textContent = 'Found ' + body.name + '.';
         locationEdit.classList.remove('open');
       }).catch(function(err){
-        msg.className = 'location-msg err';
-        msg.textContent = 'Could not find a store: ' + err.message;
+        renderLocationMsg('locationMsg', err);
       });
     }, function(err){
       msg.className = 'location-msg err';
@@ -1321,8 +1340,7 @@
           location.lat = lat; location.lon = lon; location.zip = '';
           handleResolved(body);
         }).catch(function(err){
-          msg.className = 'location-msg err';
-          msg.textContent = 'Could not refresh: ' + err.message;
+          renderLocationMsg('locationMsg', err);
         });
       }, function(){
         // Permission denied or unavailable — fall back to re-checking the saved ZIP, if any.
@@ -1331,8 +1349,7 @@
           fetch(url2).then(function(resp){
             return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
           }).then(handleResolved).catch(function(err){
-            msg.className = 'location-msg err';
-            msg.textContent = 'Could not refresh: ' + err.message;
+            renderLocationMsg('locationMsg', err);
           });
         } else {
           msg.className = 'location-msg err';
@@ -1344,8 +1361,7 @@
       fetch(url3).then(function(resp){
         return resp.json().then(function(body){ if(!resp.ok) throw new Error(body.error || 'Location lookup failed'); return body; });
       }).then(handleResolved).catch(function(err){
-        msg.className = 'location-msg err';
-        msg.textContent = 'Could not refresh: ' + err.message;
+        renderLocationMsg('locationMsg', err);
       });
     } else {
       msg.className = 'location-msg err';
@@ -1970,6 +1986,10 @@
       return '<div class="search-status"><span class="spinner"></span> checking your nearest Kroger store…</div>';
     }
     if(it.status === 'error'){
+      if(isGeographicGap(it.errorMsg)){
+        return '<div class="search-error info">' + escapeHtml(it.errorMsg) + '</div>' +
+          '<button class="retry-btn" data-retry="' + it.id + '">try again</button>';
+      }
       return '<div class="search-error">Could not fetch prices: ' + escapeHtml(it.errorMsg) + '</div>' +
         '<button class="retry-btn" data-retry="' + it.id + '">try again</button>' +
         '<div class="search-status" style="margin-top:6px;">tip: tap the item name above to fix a typo and search again</div>';

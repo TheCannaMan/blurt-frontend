@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy &amp; Terms — Blurt</title>
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#14171C; --paper:#F6F5EC; --pink:#FF4D6D; --muted:#8A8674; --line:#D8D4C4; }
+  body{
+    margin:0; background:var(--ink); font-family:'Inter',sans-serif; color:var(--ink);
+    display:flex; justify-content:center; padding:32px 16px 80px;
+  }
+  .page{ max-width:640px; width:100%; background:var(--paper); border-radius:10px; padding:36px 32px; box-shadow:0 30px 60px -20px rgba(0,0,0,0.5); }
+  a{ color:var(--pink); }
+  h1{ font-family:'Space Grotesk',sans-serif; font-size:26px; margin:0 0 4px; }
+  .updated{ font-size:12px; color:var(--muted); margin-bottom:28px; }
+  h2{ font-family:'Space Grotesk',sans-serif; font-size:17px; margin:32px 0 10px; }
+  p, li{ font-size:14px; line-height:1.65; color:#2A2E35; }
+  ul{ padding-left:20px; }
+  .note{
+    background:#EDEBDD; border:1px dashed var(--line); border-radius:8px;
+    padding:14px 16px; font-size:13px; line-height:1.6; margin:20px 0;
+  }
+  .back{ display:inline-block; margin-bottom:20px; font-size:13px; color:var(--muted); text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="page">
+  <a class="back" href="/">← Back to Blurt</a>
+  <h1>Privacy &amp; Terms</h1>
+  <div class="updated">Last updated: August 2026</div>
+
+  <div class="note">
+    Blurt is a personal project built and run by one person, currently being tested by a
+    small group of people the developer knows directly. This document is written in plain
+    language to be genuinely honest about what the app does — it is not a substitute for
+    formal legal review, and it will be revisited properly before Blurt is ever offered
+    more broadly or commercially.
+  </div>
+
+  <h2>What Blurt does with your data</h2>
+  <p><strong>Your shopping list, recipes, and settings</strong> live on your own device by
+  default (in your browser's local storage) and never touch our servers unless you choose
+  to sign in with Google.</p>
+  <p><strong>If you sign in with Google</strong>, your list, recipes, and settings sync to
+  a private database (Firestore, part of Google Firebase) tied to your Google account, so
+  they follow you across devices. Only you can access this data — it's locked to your
+  account. We receive your Google account's name and email as part of that sign-in, and
+  use it for nothing beyond identifying which synced data is yours.</p>
+  <p><strong>Your location</strong> is handled deliberately conservatively. If you use "Use
+  my location," your device's GPS coordinates are used only for that browsing session to
+  find your nearest store, then discarded — never stored anywhere. If you type a ZIP code
+  and check "remember this ZIP," that ZIP code (nothing more precise) is saved on your own
+  device so you don't have to re-enter it — it is never sent to us for storage, only used
+  to ask Kroger's API for nearby stores each time you shop.</p>
+  <p><strong>What you search for</strong> — the items and recipes you type or say — is sent
+  to our backend, which forwards it to Kroger's product API to get real prices, and to
+  TheMealDB for recipe search. We don't log, store, or build any profile from your search
+  history.</p>
+  <p><strong>We don't run ads, sell data, or use third-party analytics or tracking of any
+  kind.</strong></p>
+  <p><strong>Feedback</strong> submitted through the in-app feedback button opens your own
+  email app — we only receive what you choose to send us directly.</p>
+
+  <h2>Services Blurt relies on</h2>
+  <ul>
+    <li><strong>Kroger</strong> — for real product and store data. Governed by
+      <a href="https://www.kroger.com/i/privacy" target="_blank" rel="noopener">Kroger's own privacy policy</a>.</li>
+    <li><strong>Google Firebase</strong> — for optional sign-in and cross-device sync. Governed by
+      <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
+    <li><strong>TheMealDB</strong> — for recipe search.</li>
+    <li><strong>Render</strong> — hosts the app and its backend.</li>
+  </ul>
+
+  <h2>Deleting your data</h2>
+  <p>Since most of your data lives on your own device, clearing your browser's site data
+  for blurt.works deletes it completely. If you've signed in with Google and want your
+  synced cloud data deleted too, use the feedback button to ask — it'll be removed by
+  hand, since there's no automated account-deletion flow yet at this stage.</p>
+
+  <h2>Not for children</h2>
+  <p>Blurt isn't directed at children and we don't knowingly collect data from anyone
+  under 13.</p>
+
+  <h2>Terms of Service</h2>
+  <p><strong>This is beta software, provided as-is.</strong> Blurt is an actively-developed
+  personal project. Things may break, change, or be temporarily unavailable without
+  notice. There's no warranty of any kind.</p>
+  <p><strong>Not affiliated with Kroger.</strong> Blurt is an independent, unofficial tool
+  that uses Kroger's public developer API. It is not affiliated with, endorsed by, or
+  sponsored by The Kroger Co. or any of its banners (Fred Meyer, QFC, Ralphs, and others).</p>
+  <p><strong>Prices are estimates.</strong> Prices shown come from Kroger's API and may not
+  always match what you're charged at checkout — sales, availability, and pricing can
+  change. Always treat the final price at the register as the real one.</p>
+  <p><strong>No liability.</strong> Blurt is provided without guarantees, and the developer
+  isn't liable for shopping decisions, price discrepancies, or any damages arising from
+  using the app.</p>
+  <p><strong>Fair use.</strong> Please don't attempt to abuse, scrape, or overload the
+  service — it runs on a personal, limited-quota backend.</p>
+  <p>These terms may change as Blurt develops. If you keep using the app, that means
+  you're fine with the current version of them.</p>
+
+  <h2>Contact</h2>
+  <p>Use the feedback button inside the app — it's the fastest way to reach the
+  developer directly.</p>
+</div>
+</body>
+</html>
