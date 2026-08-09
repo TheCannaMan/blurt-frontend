@@ -182,6 +182,11 @@
   }
   .loc-go-btn{ background:var(--ink); color:var(--paper); }
   .loc-geo-btn{ background:#fff; border:1px solid var(--line) !important; color:var(--ink-soft); }
+  .remember-zip-label{
+    display:none; align-items:center; gap:6px; margin-top:8px; font-size:11px; color:var(--muted); cursor:pointer;
+  }
+  .location-edit.open ~ .remember-zip-label{ display:flex; }
+  .remember-zip-label input{ margin:0; }
   .location-msg{ margin-top:8px; font-size:11px; line-height:1.5; }
   .location-msg.ok{ color:var(--green); }
   .location-msg.err{ color:var(--pink-deep); }
@@ -744,7 +749,7 @@
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
-        <br><br><strong>About your location:</strong> Blurt doesn't remember it between visits, so if it's been about an hour the location bar will gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
+        <br><br><strong>About your location:</strong> If you check "remember this ZIP" when setting your location, Blurt will bring it back automatically each time you open the app — nothing more precise than your ZIP is ever saved, and you can uncheck that box anytime. If it's been about an hour since your location was last checked, the location bar will still gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
         <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), "start/exit shopping mode", and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
         <button class="replay-tutorial-btn" id="replayTutorialBtn">▶ replay the welcome tutorial</button>
       </div>
@@ -781,6 +786,10 @@
         <button class="loc-go-btn" id="zipMainGo">Go</button>
         <button class="loc-geo-btn" id="useLocationBtn">Use my location</button>
       </div>
+      <label class="remember-zip-label">
+        <input type="checkbox" id="rememberZipCheckbox" checked>
+        Remember this ZIP on this device
+      </label>
       <div class="location-msg" id="locationMsg"></div>
     </div>
 
@@ -885,7 +894,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.11.1</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.12.0</span></footer>
 </div>
 
 <script type="module">
@@ -947,6 +956,14 @@
   const ACTIVE_LIST_KEY = 'blurt:activeListId';
   const SETTINGS_KEY = 'blurt:settings';
   const LOCATION_KEY = 'blurt:location'; // sessionStorage, not localStorage — see note below
+  // A ZIP code alone — typed by the person, coarse (a whole area, not a
+  // point), and an explicit visible preference they can see and turn off —
+  // is a meaningfully different thing than persisting raw GPS coordinates
+  // or a resolved store address, which we still never store beyond the
+  // current session. This is the one exception, added because Android
+  // treats every relaunch of an installed app as a brand-new session,
+  // which made "remembers for an hour" behave like "never remembers."
+  const REMEMBERED_ZIP_KEY = 'blurt:rememberedZip';
   const RECIPES_KEY = 'blurt:recipes';
   const MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1';
   const PRICE_EPSILON = 0.005;
@@ -1149,6 +1166,11 @@
       location.zip = zip; location.lat = null; location.lon = null; location.locationId = body.locationId;
       location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : ''); location.lastCheckedAt = Date.now();
       saveLocation();
+      var rememberChecked = document.getElementById('rememberZipCheckbox').checked;
+      try{
+        if(rememberChecked) localStorage.setItem(REMEMBERED_ZIP_KEY, zip);
+        else localStorage.removeItem(REMEMBERED_ZIP_KEY);
+      }catch(e){}
       updateLocationDisplay();
       msg.className = 'location-msg ok';
       msg.textContent = 'Found ' + body.name + '.';
@@ -1156,6 +1178,37 @@
     }).catch(function(err){
       msg.className = 'location-msg err';
       msg.textContent = 'Could not find a store: ' + err.message;
+    });
+  }
+
+  // Auto-restore a remembered ZIP into a fresh session — this is what
+  // actually fixes the "have to re-enter my ZIP every time I open the
+  // installed app" problem, since Android treats each relaunch as a new
+  // session and sessionStorage alone can't survive that.
+  function tryRestoreRememberedZip(){
+    var remembered = null;
+    try{ remembered = localStorage.getItem(REMEMBERED_ZIP_KEY); }catch(e){}
+    if(!remembered || hasLocation()) return; // only fill in a genuinely empty session
+    var msg = document.getElementById('locationMsg');
+    msg.className = 'location-msg';
+    msg.textContent = 'Finding your usual store…';
+    var url = settings.backendUrl.replace(/\/$/, '') + '/api/location?zip=' + encodeURIComponent(remembered);
+    fetch(url).then(function(resp){
+      return resp.json().then(function(body){
+        if(!resp.ok) throw new Error(body.error || 'Location lookup failed');
+        return body;
+      });
+    }).then(function(body){
+      location.zip = remembered; location.lat = null; location.lon = null; location.locationId = body.locationId;
+      location.locationLabel = body.name + (body.address && body.address.city ? ' — ' + body.address.city : '');
+      location.lastCheckedAt = Date.now();
+      saveLocation();
+      updateLocationDisplay();
+      msg.className = 'location-msg ok';
+      msg.textContent = 'Welcome back — ' + body.name + '.';
+    }).catch(function(err){
+      msg.className = 'location-msg err';
+      msg.textContent = 'Could not restore your usual store: ' + err.message;
     });
   }
 
@@ -3102,6 +3155,7 @@
 
   updateSyncBanner();
   loadAll();
+  tryRestoreRememberedZip();
   loadRandomCategories();
 })();
 </script>
