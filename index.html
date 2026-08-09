@@ -10,7 +10,7 @@
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' https: data:;
-  connect-src 'self' https://*.onrender.com https://www.themealdb.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com;
+  connect-src 'self' https://*.onrender.com https://www.themealdb.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://blurt-c46d4.firebaseapp.com;
   base-uri 'self';
   object-src 'none';
   form-action 'self';
@@ -905,7 +905,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.13.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.13.1</span></footer>
 </div>
 
 <script type="module">
@@ -913,7 +913,7 @@
   // Config values below are meant to be public (Firebase's real security is
   // enforced by Firestore's server-side rules, not by hiding this object).
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged }
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc }
     from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
@@ -932,21 +932,35 @@
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
 
-  // Using redirect instead of popup — signInWithPopup is unreliable on
-  // mobile browsers (popups get blocked, or the result fails to hand back
-  // to the main page, especially when installed to a home screen). Redirect
-  // navigates away to Google and back, which works consistently everywhere.
-  // Success is picked up automatically by onAuthStateChanged below; this
-  // just catches errors specific to the redirect completing.
+  // Try a real popup first — smaller window, no full-page navigation, and
+  // this is what actually worked reliably before. Redirect-only turned out
+  // to have its own flakiness (the cross-origin round trip to Google and
+  // back can lose track of the in-progress sign-in in some browser storage
+  // configurations), so redirect is now just an automatic fallback for the
+  // specific cases popup genuinely can't handle — not the default path.
   getRedirectResult(auth).catch(function(err){
     console.error('Redirect sign-in error:', err);
   });
+
+  var POPUP_FALLBACK_CODES = [
+    'auth/popup-blocked',
+    'auth/popup-closed-by-user',
+    'auth/cancelled-popup-request',
+    'auth/operation-not-supported-in-this-environment'
+  ];
 
   // Exposed as a small global API so the main (classic, non-module) app
   // script can use it without needing to become a module itself.
   window.BlurtCloud = {
     onAuthChange: function(cb){ onAuthStateChanged(auth, cb); },
-    signIn: function(){ return signInWithRedirect(auth, provider); },
+    signIn: function(){
+      return signInWithPopup(auth, provider).catch(function(err){
+        if(err && POPUP_FALLBACK_CODES.indexOf(err.code) !== -1){
+          return signInWithRedirect(auth, provider);
+        }
+        throw err;
+      });
+    },
     signOut: function(){ return signOut(auth); },
     loadData: function(uid){
       return getDoc(doc(db, 'users', uid)).then(function(snap){
