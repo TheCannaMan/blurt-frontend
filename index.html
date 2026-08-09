@@ -894,7 +894,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.12.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.12.1</span></footer>
 </div>
 
 <script type="module">
@@ -1374,11 +1374,48 @@
     render(); saveList();
   }
 
+  // A little something for a specific tester — hides in plain sight as a
+  // normal-looking search result rather than a jarring popup, so the joke
+  // actually lands when they read the details instead of being spoiled upfront.
+  function checkForEasterEgg(query){
+    var normalized = query.trim().toLowerCase();
+    if(normalized === 'skyler' || normalized === 'skylar'){
+      return {
+        productId: 'skyler-legendary-001',
+        description: 'Skyler — Limited Edition, One of One',
+        brand: 'Blurt Exclusive',
+        size: 'Not sold in any store',
+        regularPrice: 999999.99,
+        promoPrice: null,
+        onSale: false,
+        imageUrl: null,
+        aisleNumber: '∞',
+        aisleDescription: 'Legendary',
+        category: 'Icons'
+      };
+    }
+    return null;
+  }
+
   function fetchOptions(id){
     var it = items.find(function(i){ return i.id === id; });
     if(!it) return;
     it.status = 'loading'; it.errorMsg = null;
     render();
+
+    var egg = checkForEasterEgg(it.query);
+    if(egg){
+      setTimeout(function(){
+        it.results = [egg];
+        it.storeInfo = { name: 'The Skyler Store', address: {} };
+        it.status = 'choosing';
+        it.expanded = true;
+        it.showAllOptions = false;
+        render(); saveList();
+      }, 650); // brief delay so it reads like a real search, not an instant reveal
+      return;
+    }
+
     var url = settings.backendUrl.replace(/\/$/, '') + '/api/compare?item=' + encodeURIComponent(it.query) + '&' + locationQueryPart();
     fetch(url).then(function(resp){
       if(!resp.ok){
@@ -1535,6 +1572,16 @@
     }
 
     render(); saveList();
+
+    if(productId === 'skyler-legendary-001'){
+      openModal(
+        '<div style="text-align:center;">' +
+          '<div style="font-size:52px;margin-bottom:10px;">🎉</div>' +
+          '<div class="modal-detail-name" style="text-align:center;margin-right:0;">You can\'t buy Skyler.</div>' +
+          '<p style="font-size:13px;color:var(--ink-soft);line-height:1.6;margin-top:6px;">He\'s already the best thing about testing this app. Thanks for helping build Blurt, Skyler 🏆</p>' +
+        '</div>'
+      );
+    }
   }
 
   function toggleExpanded(id){
