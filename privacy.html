@@ -59,18 +59,35 @@
   to our backend, which forwards it to Kroger's product API to get real prices, and to
   TheMealDB for recipe search. We don't log, store, or build any profile from your search
   history.</p>
-  <p><strong>We don't run ads, sell data, or use third-party analytics or tracking of any
-  kind.</strong></p>
+  <p><strong>Shared lists</strong> — if you create or join a shared list, its items and name
+  are visible to everyone you've shared it with (and no one else), stored the same way as
+  your personal data, tied to your Google account since collaboration requires knowing who's
+  involved.</p>
+  <p><strong>Crash reporting.</strong> We use Sentry to catch and fix bugs — when something
+  breaks, technical details (what happened, not who you are) are sent to Sentry so it can be
+  fixed. This runs on both our backend and in the app itself.</p>
+  <p><strong>Basic usage counters.</strong> We log simple, anonymous counts of which features
+  get used (e.g. "an item was added," "shopping mode was started") to understand what's
+  actually useful and what isn't. These are just an event name and a timestamp — never tied
+  to your identity, never building a profile of you individually, and never sold or shared.
+  This is different from third-party analytics or ad-tech tracking: it's our own minimal,
+  first-party counting, and nobody but the developer can see it.</p>
+  <p><strong>We don't run ads, sell data, or use any third-party advertising or behavioral
+  tracking.</strong></p>
   <p><strong>Feedback</strong> submitted through the in-app feedback button opens your own
-  email app — we only receive what you choose to send us directly.</p>
+  email app — we only receive what you choose to send us directly. Occasionally, after a
+  shopping session, the app may show a quick optional "how did it go?" prompt — always
+  dismissible, never required, and never shown more than once every few days.</p>
 
   <h2>Services Blurt relies on</h2>
   <ul>
     <li><strong>Kroger</strong> — for real product and store data. Governed by
       <a href="https://www.kroger.com/i/privacy" target="_blank" rel="noopener">Kroger's own privacy policy</a>.</li>
-    <li><strong>Google Firebase</strong> — for optional sign-in and cross-device sync. Governed by
+    <li><strong>Google Firebase</strong> — for optional sign-in, cross-device sync, shared
+      lists, and our own basic usage counters. Governed by
       <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
     <li><strong>TheMealDB</strong> — for recipe search.</li>
+    <li><strong>Sentry</strong> — for crash/error reporting, on both the backend and in the app itself.</li>
     <li><strong>Render</strong> — hosts the app and its backend.</li>
   </ul>
 
