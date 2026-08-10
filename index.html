@@ -958,7 +958,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.19.1</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.19.2</span></footer>
 </div>
 
 <script type="module">
@@ -1057,6 +1057,10 @@
     markRecipeMade: function(mealId){
       var uid = auth.currentUser.uid;
       return setDoc(doc(db, 'recipeRatings', mealId, 'made', uid), { madeAt: Date.now() });
+    },
+    unmarkRecipeMade: function(mealId){
+      var uid = auth.currentUser.uid;
+      return deleteDoc(doc(db, 'recipeRatings', mealId, 'made', uid));
     },
     loadRecipeStats: function(mealId){
       var uid = auth.currentUser ? auth.currentUser.uid : null;
@@ -2551,7 +2555,7 @@
         '<span class="my-rating-label">Your rating:</span>' + myStarsHtml +
       '</div>' +
       '<button class="made-this-btn' + (stats.iMadeThis ? ' done' : '') + '" id="madeBtn-' + mealId + '">' +
-        (stats.iMadeThis ? '✅ You made this' : '🍽️ I made this') +
+        (stats.iMadeThis ? '✅ Made this — tap to undo' : '🍽️ I made this') +
         (stats.madeCount ? ' · ' + stats.madeCount + ' made it' : '') +
       '</button>';
 
@@ -2561,9 +2565,13 @@
         submitRecipeRating(parts[0], parseInt(parts[1], 10));
       });
     });
-    if(!stats.iMadeThis){
-      var madeBtn = document.getElementById('madeBtn-' + mealId);
-      if(madeBtn) madeBtn.addEventListener('click', function(){ handleMarkMade(mealId); });
+    var madeBtn = document.getElementById('madeBtn-' + mealId);
+    if(madeBtn){
+      madeBtn.title = stats.iMadeThis ? 'Tap to undo — marked by accident?' : '';
+      madeBtn.addEventListener('click', function(){
+        if(stats.iMadeThis) handleUnmarkMade(mealId);
+        else handleMarkMade(mealId);
+      });
     }
   }
 
@@ -2585,6 +2593,14 @@
     }).catch(function(err){ console.error('Mark made failed:', err); });
   }
 
+  function handleUnmarkMade(mealId){
+    if(!window.BlurtCloud) return;
+    window.BlurtCloud.unmarkRecipeMade(mealId).then(function(){
+      loadAndRenderCommunityStats(mealId);
+      removePersonalMade(mealId);
+    }).catch(function(err){ console.error('Undo failed:', err); });
+  }
+
   function recordPersonalMade(mealId){
     var madeIds = [];
     try{ madeIds = JSON.parse(localStorage.getItem(MADE_RECIPE_IDS_KEY) || '[]'); }catch(e){ madeIds = []; }
@@ -2594,6 +2610,16 @@
     if(MADE_MILESTONES.indexOf(madeIds.length) !== -1){
       celebrateMadeMilestone(madeIds.length);
     }
+  }
+
+  function removePersonalMade(mealId){
+    var madeIds = [];
+    try{ madeIds = JSON.parse(localStorage.getItem(MADE_RECIPE_IDS_KEY) || '[]'); }catch(e){ madeIds = []; }
+    madeIds = madeIds.filter(function(id){ return id !== mealId; });
+    try{ localStorage.setItem(MADE_RECIPE_IDS_KEY, JSON.stringify(madeIds)); }catch(e){}
+    // Deliberately no "un-celebration" if this happens to cross back below a
+    // milestone — the modal already shown and dismissed isn't retroactively
+    // taken back, just the count going forward is corrected.
   }
 
   function celebrateMadeMilestone(count){
