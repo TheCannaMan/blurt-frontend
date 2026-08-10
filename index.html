@@ -149,8 +149,12 @@
   }
 
   /* Selecting an option morphs that one glass pane up into its resting
-     place via the View Transitions API (Chrome/Edge/Safari 18+); browsers
-     without support simply skip straight to the new state, no fallback needed. */
+     place via the View Transitions API. Only the two NAMED elements (the
+     tapped panel and its destination) get the 3D/blur treatment — the
+     page-wide "root" snapshot is explicitly reset to a plain, fast
+     cross-fade below, since applying the 3D/blur keyframes to the whole
+     document (via a bare *) is what caused the smeared/ghosted edges
+     around the outside of the screen during the animation. */
   html[data-theme="aperture"]::view-transition-group(*){
     animation-duration:0.5s;
     animation-timing-function:cubic-bezier(.2,.85,.25,1);
@@ -160,6 +164,15 @@
   }
   html[data-theme="aperture"]::view-transition-old(*){
     animation:apertureMorphOut 0.35s ease-in forwards;
+  }
+  html[data-theme="aperture"]::view-transition-group(root){
+    animation-duration:0.001ms;
+  }
+  html[data-theme="aperture"]::view-transition-old(root),
+  html[data-theme="aperture"]::view-transition-new(root){
+    animation:none;
+    opacity:1;
+    mix-blend-mode:normal;
   }
   @keyframes apertureMorphIn{
     from{ opacity:0; transform:perspective(800px) rotateX(-16deg) scale(0.9); filter:blur(4px) drop-shadow(0 0 0 rgba(94,234,212,0)); }
@@ -657,6 +670,17 @@
   .qty-num{ font-family:var(--font-mono),monospace; font-size:12.5px; min-width:14px; text-align:center; }
   .line-price{ font-family:var(--font-mono),monospace; font-weight:600; font-size:13.5px; }
   .change-link{ background:none; border:none; color:var(--muted); font-size:11px; text-decoration:underline; cursor:pointer; padding:0; margin-top:6px; }
+  .favorite-star{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:0; margin-top:6px; margin-left:8px; float:right; }
+  .favorite-star.active{ color:var(--gold); }
+  .favorite-star:hover{ color:var(--gold); }
+
+  .usual-chips{ display:none; flex-wrap:wrap; gap:6px; align-items:center; margin-top:14px; max-width:320px; justify-content:center; }
+  .usual-label{ font-family:var(--font-mono),monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; width:100%; text-align:center; margin-bottom:2px; }
+  .usual-chip{
+    background:var(--paper); border:1px solid var(--line); border-radius:14px; font-size:11.5px;
+    padding:5px 12px; cursor:pointer; color:var(--text-soft); font-family:var(--font-body),sans-serif;
+  }
+  .usual-chip:hover{ border-color:var(--pink); color:var(--pink-deep); }
   .change-link:hover{ color:var(--pink-deep); }
 
   footer{ text-align:center; padding:16px 10px 0; font-size:10.5px; color:rgba(246,245,236,0.35); font-family:var(--font-mono),monospace; line-height:1.8; }
@@ -921,6 +945,7 @@
 
       <button class="info-btn" id="infoToggle">how this works ⓘ</button>
       <a class="info-btn" href="/privacy.html" style="display:block;margin-top:6px;">privacy &amp; terms →</a>
+      <button class="info-btn" id="savingsBtn" style="display:block;margin-top:6px;">💰 your savings →</button>
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
         <br><br><strong>About your location:</strong> If you check "remember this ZIP" when setting your location, Blurt will bring it back automatically each time you open the app — nothing more precise than your ZIP is ever saved, and you can uncheck that box anytime. If it's been about an hour since your location was last checked, the location bar will still gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
@@ -982,6 +1007,7 @@
         <button id="manualAdd">Add</button>
       </div>
       <div class="support-warning" id="supportWarning" style="display:none;"></div>
+      <div class="usual-chips" id="favoriteChips" style="display:none;"></div>
     </div>
 
     <div class="list-header">
@@ -1068,7 +1094,7 @@
 
     <div class="torn-edge"></div>
   </div>
-  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.15.0</span></footer>
+  <footer>tap the mic before it slips your mind<br><span id="versionTag">v2.16.0</span></footer>
 </div>
 
 <script type="module">
@@ -1806,6 +1832,104 @@
     }, 0);
   }
 
+  // ---------- Savings reflection ----------
+  // A purely on-demand, opt-in-to-view reflection — never an unprompted
+  // notification. Milestones celebrate, they never nag.
+  const SAVINGS_LOG_KEY = 'blurt:savingsLog';
+  var SAVINGS_MILESTONES = [10, 25, 50, 100, 250, 500, 1000];
+
+  function recordSavings(amount){
+    var log = [];
+    try{ log = JSON.parse(localStorage.getItem(SAVINGS_LOG_KEY) || '[]'); }catch(e){ log = []; }
+    var prevTotal = log.reduce(function(sum, e){ return sum + e.saved; }, 0);
+    log.push({ saved: amount, at: Date.now() });
+    if(log.length > 2000) log = log.slice(-2000); // just a sane cap, not a real limit at personal scale
+    try{ localStorage.setItem(SAVINGS_LOG_KEY, JSON.stringify(log)); }catch(e){}
+    var newTotal = prevTotal + amount;
+    SAVINGS_MILESTONES.forEach(function(m){
+      if(prevTotal < m && newTotal >= m) celebrateSavingsMilestone(m);
+    });
+  }
+
+  function computeSavingsStats(){
+    var log = [];
+    try{ log = JSON.parse(localStorage.getItem(SAVINGS_LOG_KEY) || '[]'); }catch(e){ log = []; }
+    var now = new Date();
+    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    var allTime = 0, thisMonth = 0, pickCount = log.length;
+    log.forEach(function(e){
+      allTime += e.saved;
+      if(e.at >= monthStart) thisMonth += e.saved;
+    });
+    return { allTime: allTime, thisMonth: thisMonth, pickCount: pickCount };
+  }
+
+  function celebrateSavingsMilestone(amount){
+    openModal(
+      '<div style="text-align:center;">' +
+        '<div style="font-size:52px;margin-bottom:10px;">💰</div>' +
+        '<div class="modal-detail-name" style="text-align:center;margin-right:0;">' + fmt(amount) + ' saved!</div>' +
+        '<p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-top:6px;">Picking the cheaper option has saved you ' + fmt(amount) + ' so far. Nice work.</p>' +
+      '</div>'
+    );
+  }
+
+  function openSavingsModal(){
+    var stats = computeSavingsStats();
+    openModal(
+      '<div class="modal-detail-name" style="text-align:center;margin-right:0;">💰 Your Savings</div>' +
+      '<div class="modal-detail-row"><span>This month</span><span>' + fmt(stats.thisMonth) + '</span></div>' +
+      '<div class="modal-detail-row"><span>All time</span><span>' + fmt(stats.allTime) + '</span></div>' +
+      '<div class="modal-detail-row"><span>Smart picks</span><span>' + stats.pickCount + '</span></div>' +
+      '<p style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:10px;">Counted whenever you picked something cheaper than the priciest option shown for that search.</p>'
+    );
+  }
+
+  // ---------- Favorites (manual, user-curated — nothing tracked automatically) ----------
+  const FAVORITES_KEY = 'blurt:favorites';
+  var favorites = [];
+
+  function loadFavorites(){
+    try{ favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); }catch(e){ favorites = []; }
+  }
+  function saveFavorites(){
+    try{ localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); }catch(e){}
+  }
+  function isFavorite(name){
+    var key = name.toLowerCase();
+    return favorites.some(function(f){ return f.toLowerCase() === key; });
+  }
+  function toggleFavorite(name){
+    var key = name.toLowerCase();
+    if(isFavorite(name)){
+      favorites = favorites.filter(function(f){ return f.toLowerCase() !== key; });
+    } else {
+      favorites.push(name);
+    }
+    saveFavorites();
+    render();
+    renderFavoriteChips();
+  }
+  function renderFavoriteChips(){
+    var container = document.getElementById('favoriteChips');
+    if(!container) return;
+    var onListKeys = {};
+    items.forEach(function(i){ onListKeys[i.query.toLowerCase()] = true; });
+    var showable = favorites.filter(function(f){ return !onListKeys[f.toLowerCase()]; });
+    if(showable.length === 0){
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+    container.style.display = 'flex';
+    container.innerHTML = '<span class="usual-label">favorites:</span>' + showable.map(function(f){
+      return '<button class="usual-chip" data-favorite-add="' + escapeHtml(f) + '">' + escapeHtml(f) + '</button>';
+    }).join('');
+    container.querySelectorAll('[data-favorite-add]').forEach(function(btn){
+      btn.addEventListener('click', function(){ addItems(btn.getAttribute('data-favorite-add')); });
+    });
+  }
+
   function estimateShopTime(resolvedItems){
     var aisles = {};
     resolvedItems.forEach(function(it){
@@ -1834,6 +1958,16 @@
     it.dismissedBetterPrice = null;
     it.priceHistory = [{ price: it.priceAtSelection, checkedAt: Date.now() }];
     if(!it.qty) it.qty = 1;
+
+    // Savings reflection: if this pick was cheaper than the priciest option
+    // actually shown for this search, log the difference. Purely a personal,
+    // on-demand reflection — never surfaced as an unprompted notification.
+    var pricesShown = it.results.map(function(p){ return p.promoPrice || p.regularPrice; });
+    var priciestShown = Math.max.apply(null, pricesShown);
+    var savedThisPick = (priciestShown - it.priceAtSelection) * it.qty;
+    if(savedThisPick > PRICE_EPSILON){
+      recordSavings(savedThisPick);
+    }
 
     // Gentle nudge: only fires the moment a pick actually crosses you over
     // budget — not every time you're already over it.
@@ -2283,6 +2417,7 @@
           '<div class="line-price">' + fmt(lineTotal) + '</div>' +
         '</div>' +
         '<button class="change-link" data-toggle-expand="' + it.id + '">change option</button>' +
+        '<button class="favorite-star' + (isFavorite(it.query) ? ' active' : '') + '" data-toggle-favorite="' + escapeHtml(it.query) + '" title="' + (isFavorite(it.query) ? 'Remove from favorites' : 'Save as a favorite quick-add') + '">' + (isFavorite(it.query) ? '★' : '☆') + '</button>' +
       '</div></div>';
   }
 
@@ -2617,6 +2752,7 @@
     var countChip = document.getElementById('countChip');
     var totalValue = document.getElementById('totalValue');
     var totalSub = document.getElementById('totalSub');
+    renderFavoriteChips();
 
     var resolvedItems = items.filter(function(i){ return i.status === 'resolved'; });
     var skippedItems = items.filter(function(i){ return i.skipped; });
@@ -2734,6 +2870,7 @@
     listEl.querySelectorAll('[data-retry]').forEach(function(btn){ btn.addEventListener('click', function(){ fetchOptions(btn.getAttribute('data-retry')); }); });
     listEl.querySelectorAll('[data-sort]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleSort(btn.getAttribute('data-sort')); }); });
     listEl.querySelectorAll('[data-toggle-expand]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleExpanded(btn.getAttribute('data-toggle-expand')); }); });
+    listEl.querySelectorAll('[data-toggle-favorite]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleFavorite(btn.getAttribute('data-toggle-favorite')); }); });
     listEl.querySelectorAll('[data-toggle-more]').forEach(function(btn){ btn.addEventListener('click', function(){ toggleShowAll(btn.getAttribute('data-toggle-more')); }); });
     listEl.querySelectorAll('[data-qty-minus]').forEach(function(btn){ btn.addEventListener('click', function(){ changeQty(btn.getAttribute('data-qty-minus'), -1); }); });
     listEl.querySelectorAll('[data-qty-plus]').forEach(function(btn){ btn.addEventListener('click', function(){ changeQty(btn.getAttribute('data-qty-plus'), 1); }); });
@@ -2795,6 +2932,7 @@
   document.getElementById('infoToggle').addEventListener('click', function(){
     document.getElementById('infoPanel').classList.toggle('open');
   });
+  document.getElementById('savingsBtn').addEventListener('click', openSavingsModal);
 
   // Settings panel (backend URL only now)
   var settingsPanel = document.getElementById('settingsPanel');
@@ -3617,6 +3755,7 @@
   try{ tutorialAlreadySeen = localStorage.getItem(TUTORIAL_SEEN_KEY) === '1'; }catch(e){}
   if(!tutorialAlreadySeen) openTutorial();
 
+  loadFavorites();
   updateSyncBanner();
   loadAll();
   tryRestoreRememberedZip();
