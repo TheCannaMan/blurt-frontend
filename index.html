@@ -405,11 +405,31 @@
     text-transform:uppercase; color:var(--muted); margin-top:4px;
   }
   .top-actions{ display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:6px 8px; max-width:190px; }
+  .more-menu-wrap{ position:relative; }
+  .more-menu-dropdown{
+    display:none; flex-direction:column; gap:2px;
+    position:absolute; top:calc(100% + 8px); right:0; z-index:50;
+    background:var(--paper); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 12px 24px -8px rgba(var(--ink-rgb),0.28); padding:6px; min-width:172px;
+  }
+  .more-menu-dropdown.open{ display:flex; }
+  .more-menu-item{
+    display:flex; align-items:center; gap:9px; background:none; border:none; cursor:pointer;
+    padding:9px 10px; border-radius:8px; font-family:var(--font-body),sans-serif; font-size:12.5px;
+    color:var(--text); text-align:left; width:100%;
+  }
+  .more-menu-item svg{ width:15px; height:15px; flex-shrink:0; color:var(--text-soft); }
+  .more-menu-item:hover, .more-menu-item:focus-visible{ background:var(--paper-dim); }
   .count-chip{
+    position:absolute; top:16px; right:20px;
     font-family:var(--font-mono),monospace; font-size:12px; background:var(--ink);
     color:var(--on-accent); padding:5px 10px; border-radius:20px; white-space:nowrap;
   }
-  .settings-btn{
+  /* Instrument already shows the item count in its sticky top readout
+     (the "X items" sub-label next to the budget gauge) — a second floating
+     badge down in the bottom mic dock would be redundant, and the dock's
+     already tight on vertical space with the fixed-position layout. */
+  html[data-theme="instrument"] .count-chip{ display:none; }  .settings-btn{
     background:none; border:1px solid var(--line); cursor:pointer;
     color:var(--text-soft); font-family:var(--font-mono),monospace; font-size:10.5px;
     padding:4px 9px; border-radius:14px; display:flex; align-items:center; gap:5px;
@@ -530,6 +550,7 @@
   .location-msg.info{ color:var(--text-soft); }
 
   .mic-zone{
+    position:relative;
     padding:28px 26px 22px; display:flex; flex-direction:column; align-items:center;
     border-bottom:1px var(--line-style) var(--line); text-align:center;
   }
@@ -728,6 +749,10 @@
     text-transform:uppercase; letter-spacing:0.06em; padding:14px 4px 6px; font-weight:600;
   }
   .shopping-aisle-divider:first-child{ padding-top:2px; }
+  .recipe-mode-heading{
+    font-family:var(--font-display),sans-serif; font-weight:700; font-size:19px;
+    color:var(--text); padding:2px 4px 14px; border-bottom:1px var(--line-style) var(--line); margin-bottom:12px;
+  }
   .shopping-item-row{
     display:flex; align-items:center; gap:14px; padding:16px 14px; border-radius:14px;
     margin-bottom:10px; background:var(--paper); border:2px solid var(--line); cursor:pointer;
@@ -751,25 +776,43 @@
     font-size:13.5px; font-weight:600; color:var(--text-soft); text-align:center; flex-shrink:0;
   }
 
+  /* Guided tour — replaces the old centered-card tutorial with a real
+     walkthrough of the actual UI. The dim backdrop only shows for the two
+     no-target steps (welcome/closing); for every other step, the
+     highlighted element's own oversized box-shadow does the dimming —
+     simpler and more robust than computing a cutout, since it adapts to
+     any element's real size/position automatically, in any theme. */
+  .tour-dim-backdrop{ display:none; position:fixed; inset:0; background:rgba(var(--ink-rgb),0.72); z-index:1195; }
+  .tour-dim-backdrop.show{ display:block; }
+  .tour-highlight{
+    position:relative !important; z-index:1201 !important; border-radius:10px;
+    animation:tourPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes tourPulse{
+    0%,100%{ box-shadow:0 0 0 4px var(--pink), 0 0 0 9999px rgba(var(--ink-rgb),0.72); }
+    50%{ box-shadow:0 0 0 7px var(--pink), 0 0 0 9999px rgba(var(--ink-rgb),0.72); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .tour-highlight{ animation:none; box-shadow:0 0 0 4px var(--pink), 0 0 0 9999px rgba(var(--ink-rgb),0.72); }
+  }
+  .tour-bubble{
+    display:none; position:fixed; z-index:1202; background:var(--paper); border-radius:16px;
+    padding:20px 20px 18px; max-width:320px; width:calc(100% - 32px);
+    box-shadow:0 20px 50px -10px rgba(0,0,0,0.5); text-align:center;
+    transition:top 0.25s ease, left 0.25s ease;
+  }
+  .tour-bubble.open{ display:block; }
+  .tour-bubble.centered{ top:50% !important; left:50% !important; transform:translate(-50%,-50%); }
+
   /* First-run tutorial */
-  .tutorial-overlay{
-    display:none; position:fixed; inset:0; background:rgba(var(--ink-rgb),0.92); z-index:300;
-    align-items:center; justify-content:center; padding:24px;
-  }
-  .tutorial-overlay.open{ display:flex; }
-  .tutorial-card{
-    background:var(--paper); border-radius:16px; padding:30px 24px 24px; max-width:380px;
-    width:100%; text-align:center; position:relative;
-  }
   .tutorial-skip{
     position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted);
     font-size:12px; cursor:pointer; text-decoration:underline; font-family:var(--font-body),sans-serif;
   }
   .tutorial-skip:hover{ color:var(--pink-deep); }
-  .tutorial-icon{ font-size:46px; margin-bottom:12px; line-height:1; }
-  .tutorial-title{ font-family:var(--font-display),sans-serif; font-weight:700; font-size:19px; margin-bottom:10px; color:var(--text); }
-  .tutorial-body{ font-size:14px; color:var(--text-soft); line-height:1.6; margin-bottom:22px; }
-  .tutorial-dots{ display:flex; justify-content:center; gap:6px; margin-bottom:22px; }
+  .tutorial-title{ font-family:var(--font-display),sans-serif; font-weight:700; font-size:17px; margin-bottom:8px; margin-top:8px; color:var(--text); }
+  .tutorial-body{ font-size:13.5px; color:var(--text-soft); line-height:1.55; margin-bottom:16px; }
+  .tutorial-dots{ display:flex; justify-content:center; gap:6px; margin-bottom:16px; }
   .tutorial-dot{ width:7px; height:7px; border-radius:50%; background:var(--line); transition:all 0.2s ease; }
   .tutorial-dot.active{ background:var(--pink); width:18px; border-radius:4px; }
   .tutorial-nav{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -932,6 +975,7 @@
   .change-link:hover{ color:var(--pink-deep); }
 
   footer{ text-align:center; padding:18px 10px 4px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .footer-links-row{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
   .footer-tagline{ font-size:10.5px; color:var(--muted); font-family:var(--font-mono),monospace; line-height:1.8; }
   #versionTag{ font-size:10.5px; color:var(--muted); opacity:0.7; font-family:var(--font-mono),monospace; }
   .footer-link{
@@ -1116,11 +1160,16 @@
 </head>
 <body>
 <!-- PREVIEW-ONLY theme switcher — remove this block once you've picked a direction -->
-<div id="themePreviewSwitcher" style="position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; gap:6px; background:rgba(20,20,20,0.85); padding:6px; border-radius:999px; backdrop-filter:blur(8px);">
-  <button data-preview-theme="ledger" style="font-family:'Courier Prime',monospace; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#F7F3E8; color:#2B2822;">Ledger</button>
-  <button data-preview-theme="aperture" style="font-family:'Space Grotesk',sans-serif; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#141A2E; color:#5EEAD4;">Aperture</button>
-  <button data-preview-theme="reserve" style="font-family:'Fraunces',serif; font-style:italic; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#FFFFFF; color:#A8823E;">Reserve</button>
-  <button data-preview-theme="instrument" style="font-family:'Chakra Petch',sans-serif; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#0D1517; color:#2DE1E7; text-transform:uppercase; letter-spacing:0.04em;">Instrument</button>
+<div id="themePreviewSwitcher" style="position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; align-items:center; gap:8px;">
+  <button id="themePreviewToggle" aria-expanded="false" aria-label="Toggle theme switcher" style="width:34px; height:34px; border-radius:50%; border:none; cursor:pointer; background:rgba(20,20,20,0.85); color:#fff; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".6"/><circle cx="17.5" cy="10.5" r=".6"/><circle cx="8.5" cy="7.5" r=".6"/><circle cx="6.5" cy="12.5" r=".6"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+  </button>
+  <div id="themePreviewPanel" style="display:flex; gap:6px; background:rgba(20,20,20,0.85); padding:6px; border-radius:999px; backdrop-filter:blur(8px); transform-origin:top center; transform:scale(0.85) translateY(-4px); opacity:0; pointer-events:none; transition:transform 0.18s ease, opacity 0.18s ease;">
+    <button data-preview-theme="ledger" style="font-family:'Courier Prime',monospace; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#F7F3E8; color:#2B2822;">Ledger</button>
+    <button data-preview-theme="aperture" style="font-family:'Space Grotesk',sans-serif; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#141A2E; color:#5EEAD4;">Aperture</button>
+    <button data-preview-theme="reserve" style="font-family:'Fraunces',serif; font-style:italic; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#FFFFFF; color:#A8823E;">Reserve</button>
+    <button data-preview-theme="instrument" style="font-family:'Chakra Petch',sans-serif; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#0D1517; color:#2DE1E7; text-transform:uppercase; letter-spacing:0.04em;">Instrument</button>
+  </div>
 </div>
 <div class="app">
   <div class="modal-overlay" id="modalOverlay">
@@ -1130,18 +1179,16 @@
     </div>
   </div>
 
-  <div class="tutorial-overlay" id="tutorialOverlay">
-    <div class="tutorial-card">
-      <button class="tutorial-skip" id="tutorialSkipBtn">Skip</button>
-      <div class="tutorial-icon" id="tutorialIcon">👋</div>
-      <div class="tutorial-title" id="tutorialTitle"></div>
-      <div class="tutorial-body" id="tutorialBody"></div>
-      <div class="tutorial-dots" id="tutorialDots"></div>
-      <div class="tutorial-nav">
-        <button class="tutorial-back" id="tutorialBackBtn">← Back</button>
-        <span class="tutorial-progress" id="tutorialProgress"></span>
-        <button class="tutorial-next" id="tutorialNextBtn">Next →</button>
-      </div>
+  <div class="tour-dim-backdrop" id="tourDimBackdrop"></div>
+  <div class="tour-bubble" id="tourBubble">
+    <button class="tutorial-skip" id="tourSkipBtn">Skip</button>
+    <div class="tutorial-title" id="tourTitle"></div>
+    <div class="tutorial-body" id="tourBody"></div>
+    <div class="tutorial-dots" id="tourDots"></div>
+    <div class="tutorial-nav">
+      <button class="tutorial-back" id="tourBackBtn">← Back</button>
+      <span class="tutorial-progress" id="tourProgress"></span>
+      <button class="tutorial-next" id="tourNextBtn">Next →</button>
     </div>
   </div>
 
@@ -1161,6 +1208,21 @@
     <div class="shopping-mode-footer" id="shoppingModeFooter"></div>
   </div>
 
+  <div class="shopping-mode-overlay" id="recipeModeOverlay">
+    <div class="shopping-mode-header">
+      <button class="shopping-exit-btn" id="recipeModeExitBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Exit
+      </button>
+      <div class="shopping-mode-title" id="recipeModeTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        Recipe
+      </div>
+      <div class="shopping-mode-count" id="recipeModeCount">0/0</div>
+    </div>
+    <div class="shopping-mode-list" id="recipeModeList"></div>
+  </div>
+
   <div class="receipt">
     <header>
       <div class="top-row">
@@ -1169,23 +1231,30 @@
           <div class="tagline">say it. price it. save it.</div>
         </div>
         <div class="top-actions">
-          <div class="count-chip" id="countChip">0 in list</div>
-          <button class="info-btn" id="infoToggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            how this works
-          </button>
-          <button class="info-btn" id="savingsBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            your savings
-          </button>
-          <button class="settings-btn" id="feedbackBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 7 8-7"/></svg>
-            feedback
-          </button>
-          <button class="settings-btn" id="settingsToggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            setup
-          </button>
+          <div class="more-menu-wrap">
+            <button class="settings-btn" id="moreMenuToggle" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              more
+            </button>
+            <div class="more-menu-dropdown" id="moreMenuDropdown">
+              <button class="more-menu-item" id="infoToggle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                how this works
+              </button>
+              <button class="more-menu-item" id="savingsBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                your savings
+              </button>
+              <button class="more-menu-item" id="feedbackBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 7 8-7"/></svg>
+                feedback
+              </button>
+              <button class="more-menu-item" id="settingsToggle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                setup
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1291,6 +1360,7 @@
     </div>
 
     <div class="mic-zone">
+      <div class="count-chip" id="countChip">0 in list</div>
       <div class="mic-btn-wrap">
         <button class="mic-btn" id="micBtn" aria-label="Tap to speak, or press and hold to type">
           <span class="ring"></span>
@@ -1410,10 +1480,16 @@
     <div class="torn-edge"></div>
   </div>
   <footer>
-    <a class="footer-link" href="/privacy.html">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      privacy &amp; terms
-    </a>
+    <div class="footer-links-row">
+      <a class="footer-link" href="/privacy.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        privacy &amp; terms
+      </a>
+      <button class="footer-link" id="feedbackFooterBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 7 8-7"/></svg>
+        feedback
+      </button>
+    </div>
     <div class="footer-tagline">tap the mic before it slips your mind</div>
     <span id="versionTag">v2.21.0</span>
   </footer>
@@ -2488,8 +2564,9 @@
   }
   document.addEventListener('visibilitychange', function(){
     // Browsers auto-release the wake lock when the tab is hidden — reacquire
-    // it if we're still in Shopping Mode when the person comes back.
-    if(document.visibilityState === 'visible' && shoppingMode) requestWakeLock();
+    // it if we're still in Shopping Mode or Recipe Mode when the person
+    // comes back (both keep the screen on for hands-full moments).
+    if(document.visibilityState === 'visible' && (shoppingMode || recipeModeCurrentRecipe)) requestWakeLock();
   });
 
   function enterShoppingMode(){
@@ -2515,6 +2592,64 @@
   }
   document.getElementById('startShoppingModeBtn').addEventListener('click', enterShoppingMode);
   document.getElementById('shoppingExitBtn').addEventListener('click', exitShoppingMode);
+
+  // ---------- Recipe Mode — a hands-free ingredient checklist while
+  // actually cooking, distinct from Shopping Mode's aisle-walking view.
+  // Reuses the same big-touch-target overlay pattern and the same wake
+  // lock (screen staying on matters just as much with messy hands at the
+  // stove as it does walking the aisles).
+  var recipeModeCurrentRecipe = null;
+  var recipeModeChecked = {};
+
+  function enterRecipeMode(recipeId){
+    var recipe = recipes.find(function(r){ return r.id === recipeId; });
+    if(!recipe || !recipe.ingredients || recipe.ingredients.length === 0){
+      window.alert('This recipe doesn\'t have any ingredients to show.');
+      return;
+    }
+    recipeModeCurrentRecipe = recipe;
+    recipeModeChecked = {};
+    document.getElementById('recipeModeOverlay').classList.add('open');
+    requestWakeLock();
+    renderRecipeMode();
+    logEvent('recipe_mode_started');
+  }
+  function exitRecipeMode(){
+    document.getElementById('recipeModeOverlay').classList.remove('open');
+    releaseWakeLock();
+    recipeModeCurrentRecipe = null;
+    logEvent('recipe_mode_exited');
+  }
+  document.getElementById('recipeModeExitBtn').addEventListener('click', exitRecipeMode);
+
+  function renderRecipeMode(){
+    var recipe = recipeModeCurrentRecipe;
+    if(!recipe) return;
+    var total = recipe.ingredients.length;
+    var checkedCount = Object.keys(recipeModeChecked).filter(function(k){ return recipeModeChecked[k]; }).length;
+    document.getElementById('recipeModeCount').textContent = checkedCount + '/' + total;
+
+    var headingHtml = '<div class="recipe-mode-heading">' + escapeHtml(recipe.name) + '</div>';
+    var rowsHtml = recipe.ingredients.map(function(ing, idx){
+      var isChecked = !!recipeModeChecked[idx];
+      return '<div class="shopping-item-row' + (isChecked ? ' picked' : '') + '" data-recipe-check="' + idx + '">' +
+        '<div class="shopping-item-checkbox">' + iconCheck() + '</div>' +
+        '<div class="shopping-item-info">' +
+          '<div class="shopping-item-name">' + escapeHtml(ing.display) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var listEl = document.getElementById('recipeModeList');
+    listEl.innerHTML = headingHtml + rowsHtml;
+    listEl.querySelectorAll('[data-recipe-check]').forEach(function(row){
+      row.addEventListener('click', function(){
+        var idx = row.getAttribute('data-recipe-check');
+        recipeModeChecked[idx] = !recipeModeChecked[idx];
+        renderRecipeMode();
+      });
+    });
+  }
 
   // A soft, dismissible, infrequent check-in — never a blocking demand for
   // feedback. Only appears after a real shopping session (2+ items), and
@@ -3596,7 +3731,7 @@
     logEvent('bug_report_submitted');
   }
 
-  document.getElementById('feedbackBtn').addEventListener('click', function(){
+  function openFeedbackChoiceModal(){
     openModal(
       '<div class="modal-detail-name">Feedback</div>' +
       '<p style="font-size:12.5px;color:var(--text-soft);line-height:1.5;margin:0 0 14px;">What kind of feedback is this?</p>' +
@@ -3607,6 +3742,38 @@
     );
     document.getElementById('generalFeedbackBtn').addEventListener('click', function(){ closeModal(); sendGeneralFeedback(); });
     document.getElementById('bugReportBtn').addEventListener('click', function(){ closeModal(); sendBugReport(); });
+  }
+  document.getElementById('feedbackBtn').addEventListener('click', openFeedbackChoiceModal);
+  document.getElementById('feedbackFooterBtn').addEventListener('click', openFeedbackChoiceModal);
+
+  // ---------- "More" dropdown — consolidates how-this-works / savings /
+  // feedback / setup, which used to be four separate buttons crowding the
+  // header. The tutorial now covers first-run orientation, so these don't
+  // all need to be permanently visible at once.
+  var moreMenuToggle = document.getElementById('moreMenuToggle');
+  var moreMenuDropdown = document.getElementById('moreMenuDropdown');
+  function closeMoreMenu(){
+    moreMenuDropdown.classList.remove('open');
+    moreMenuToggle.setAttribute('aria-expanded', 'false');
+  }
+  moreMenuToggle.addEventListener('click', function(e){
+    e.stopPropagation();
+    var isOpen = moreMenuDropdown.classList.toggle('open');
+    moreMenuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  });
+  document.addEventListener('click', function(e){
+    if(moreMenuDropdown.classList.contains('open') && !moreMenuDropdown.contains(e.target) && e.target !== moreMenuToggle){
+      closeMoreMenu();
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && moreMenuDropdown.classList.contains('open')) closeMoreMenu();
+  });
+  // Each item keeps its own existing click handler (toggling the settings
+  // panel, opening the savings modal, etc.) — this just additionally closes
+  // the dropdown itself once something inside it has been chosen.
+  moreMenuDropdown.querySelectorAll('.more-menu-item').forEach(function(btn){
+    btn.addEventListener('click', closeMoreMenu);
   });
 
   document.getElementById('clearPicked').addEventListener('click', clearPicked);
@@ -4308,6 +4475,7 @@
           '<ul class="recipe-ingredients">' + ingredientsHtml + '</ul>' +
           '<div class="recipe-card-actions">' +
             '<button class="recipe-add-btn" data-add-recipe="' + r.id + '">Add all to shopping list</button>' +
+            '<button class="recipe-add-btn" data-cook-recipe="' + r.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>Cook this</button>' +
             linkHtml +
           '</div>' +
         '</div>' +
@@ -4336,6 +4504,12 @@
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         addRecipeToShoppingList(btn.getAttribute('data-add-recipe'));
+      });
+    });
+    listEl.querySelectorAll('[data-cook-recipe]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        enterRecipeMode(btn.getAttribute('data-cook-recipe'));
       });
     });
   }
@@ -4480,56 +4654,124 @@
 
   // ---------- First-run tutorial ----------
   var TUTORIAL_SEEN_KEY = 'blurt:tutorialSeen';
-  var TUTORIAL_STEPS = [
-    { icon: '👋', title: 'Welcome to Blurt', body: 'Say it before you forget it. Talk or type what you need, and Blurt finds real prices at your nearest Kroger-family store.' },
-    { icon: '🎤', title: 'Just talk', body: 'Tap the mic and say what you need — even a few things at once, like "carrots and potatoes." Typing works the same way.' },
-    { icon: '💰', title: 'Real prices, your choice', body: 'Blurt shows real options from the store. Pick one, or tap "pick cheapest for all" to skip making a decision on every single item.' },
-    { icon: '📊', title: 'Stay on budget', body: 'Set a budget and Blurt gently lets you know if a pick pushes you over — no blocking, just a heads up right when it happens.' },
-    { icon: '🍳', title: 'Cook something, shop for it', body: 'Search a recipe or build your own list, then send every ingredient straight to your shopping list in one tap.' },
-    { icon: '🛒', title: 'When you\u2019re actually shopping', body: 'Tap "Start Shopping Mode" for a big, simple, walk-the-aisles view — sorted by aisle when we know it, easy to tap with one hand.' },
-    { icon: '🏪', title: 'Built for the Kroger family', body: 'Fred Meyer, QFC, Ralphs, and more — Blurt sticks to one family of stores on purpose, so every price is real, never guessed.' },
-    { icon: '✅', title: 'That\u2019s the basics', body: 'Tap the ⓘ info button anytime for the full rundown, or the feedback button if something\u2019s off. You\u2019re ready — let\u2019s go.' }
+
+  // Each step optionally switches tabs first, then either highlights a real
+  // element (a selector string, or a function for elements that only
+  // sometimes exist — e.g. an item card, which won't be there yet for a
+  // brand-new list) or shows centered with no target at all. Kept short on
+  // purpose — one real idea per step, not a feature dump.
+  var TOUR_STEPS = [
+    { title: 'Welcome to Blurt', body: 'A real look around, not just words on a card — Next walks you through it. Skip anytime.' },
+    { tab: 'shop', target: '#micBtn', title: 'Just talk', body: 'Tap and say what you need — even a few things at once. Press and hold instead to type.' },
+    { tab: 'shop', target: '#readAloudBtn', title: 'Read it back', body: 'Have your list read aloud hands-free — how many items are on it shows right here too.' },
+    { tab: 'shop', target: '#locationBar', title: 'Set your store', body: 'Pick your nearest Kroger-family store — prices are only ever real once this is set.' },
+    { tab: 'shop', target: '#listSwitcherBtn', title: 'More than one list', body: 'Switch between lists anytime, or create one you share live with someone else.' },
+    { tab: 'shop', target: function(){ return document.querySelector('.item-card') || document.getElementById('manualRow'); },
+      title: 'Pick a price, or skip deciding', body: 'Real store options show up here. Not feeling picky? "Pick cheapest for all" does it in one tap.' },
+    { tab: 'shop', target: '#budgetRow', title: 'Stay on budget', body: 'Set one, and Blurt gives you a heads up the moment a pick pushes you over — never before.' },
+    { tab: 'shop', target: '#startShoppingModeBtn', title: 'When you\u2019re actually shopping', body: 'A big, simple, one-handed view for walking the aisles — sorted by aisle when we know it.' },
+    { tab: 'shop', target: '#moreMenuToggle', title: 'Everything else lives here', body: 'How this works, your savings, feedback, and setup — tucked away so it\u2019s not in your way.' },
+    { tab: 'search', target: '#recipeSearchInput', title: 'Find a recipe', body: 'Search anything, then send every ingredient straight to your list in one tap.' },
+    { tab: 'search', target: '#rollRandomBtn', title: 'Feeling indecisive?', body: 'Rolls something for you — filter by category first if you\u2019re after something specific.' },
+    { tab: 'saved', target: function(){ return document.querySelector('.recipe-card') || document.getElementById('recipeList'); },
+      title: 'Cook it, rate it', body: 'Saved recipes live here — rate them, mark what you\u2019ve made, or open a big cooking checklist.' },
+    { title: 'Built for the Kroger family', body: 'Fred Meyer, QFC, Ralphs, and more — on purpose, so every price is real, never guessed. You\u2019re set.' }
   ];
-  var tutorialStepIndex = 0;
+  var tourStepIndex = 0;
+  var tourHighlightedEl = null;
 
-  function renderTutorialStep(){
-    var step = TUTORIAL_STEPS[tutorialStepIndex];
-    var isLast = tutorialStepIndex === TUTORIAL_STEPS.length - 1;
-    var isFirst = tutorialStepIndex === 0;
-    document.getElementById('tutorialIcon').textContent = step.icon;
-    document.getElementById('tutorialTitle').textContent = step.title;
-    document.getElementById('tutorialBody').textContent = step.body;
-    document.getElementById('tutorialProgress').textContent = (tutorialStepIndex + 1) + ' of ' + TUTORIAL_STEPS.length;
-    document.getElementById('tutorialBackBtn').style.visibility = isFirst ? 'hidden' : 'visible';
-    document.getElementById('tutorialNextBtn').textContent = isLast ? "Let's go →" : 'Next →';
-    document.getElementById('tutorialDots').innerHTML = TUTORIAL_STEPS.map(function(_, i){
-      return '<span class="tutorial-dot' + (i === tutorialStepIndex ? ' active' : '') + '"></span>';
+  function tourResolveTarget(step){
+    if(!step.target) return null;
+    var el = typeof step.target === 'function' ? step.target() : document.querySelector(step.target);
+    return el || null;
+  }
+
+  function tourClearHighlight(){
+    if(tourHighlightedEl){
+      tourHighlightedEl.classList.remove('tour-highlight');
+      tourHighlightedEl = null;
+    }
+  }
+
+  function tourPositionBubble(target){
+    var bubble = document.getElementById('tourBubble');
+    var rect = target.getBoundingClientRect();
+    var bubbleRect = bubble.getBoundingClientRect();
+    var margin = 14;
+    var top;
+    if(rect.bottom + margin + bubbleRect.height < window.innerHeight){
+      top = rect.bottom + margin;
+    } else if(rect.top - margin - bubbleRect.height > 0){
+      top = rect.top - margin - bubbleRect.height;
+    } else {
+      top = Math.max(margin, (window.innerHeight - bubbleRect.height) / 2);
+    }
+    var left = rect.left + rect.width / 2 - bubbleRect.width / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - bubbleRect.width - margin));
+    bubble.classList.remove('centered');
+    bubble.style.top = top + 'px';
+    bubble.style.left = left + 'px';
+  }
+
+  function renderTourStep(){
+    var step = TOUR_STEPS[tourStepIndex];
+    if(step.tab) setActiveTab(step.tab);
+    tourClearHighlight();
+
+    document.getElementById('tourTitle').textContent = step.title;
+    document.getElementById('tourBody').textContent = step.body;
+    document.getElementById('tourProgress').textContent = (tourStepIndex + 1) + ' of ' + TOUR_STEPS.length;
+    document.getElementById('tourBackBtn').style.visibility = tourStepIndex === 0 ? 'hidden' : 'visible';
+    document.getElementById('tourNextBtn').textContent = tourStepIndex === TOUR_STEPS.length - 1 ? "Let's go →" : 'Next →';
+    document.getElementById('tourDots').innerHTML = TOUR_STEPS.map(function(_, i){
+      return '<span class="tutorial-dot' + (i === tourStepIndex ? ' active' : '') + '"></span>';
     }).join('');
+
+    var bubble = document.getElementById('tourBubble');
+    var backdrop = document.getElementById('tourDimBackdrop');
+    var target = tourResolveTarget(step);
+
+    if(target){
+      backdrop.classList.remove('show');
+      target.classList.add('tour-highlight');
+      tourHighlightedEl = target;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Brief delay so the smooth-scroll has settled before measuring position.
+      setTimeout(function(){ tourPositionBubble(target); }, 260);
+    } else {
+      backdrop.classList.add('show');
+      bubble.classList.add('centered');
+    }
   }
 
-  function openTutorial(){
-    tutorialStepIndex = 0;
-    document.getElementById('tutorialOverlay').classList.add('open');
-    renderTutorialStep();
+  function openTour(){
+    tourStepIndex = 0;
+    document.getElementById('tourBubble').classList.add('open');
+    renderTourStep();
   }
-  function closeTutorial(){
-    document.getElementById('tutorialOverlay').classList.remove('open');
+  function closeTour(){
+    document.getElementById('tourBubble').classList.remove('open');
+    document.getElementById('tourDimBackdrop').classList.remove('show');
+    tourClearHighlight();
     try{ localStorage.setItem(TUTORIAL_SEEN_KEY, '1'); }catch(e){}
   }
-  document.getElementById('tutorialNextBtn').addEventListener('click', function(){
-    if(tutorialStepIndex === TUTORIAL_STEPS.length - 1){ closeTutorial(); return; }
-    tutorialStepIndex++;
-    renderTutorialStep();
+  document.getElementById('tourNextBtn').addEventListener('click', function(){
+    if(tourStepIndex === TOUR_STEPS.length - 1){ closeTour(); return; }
+    tourStepIndex++;
+    renderTourStep();
   });
-  document.getElementById('tutorialBackBtn').addEventListener('click', function(){
-    if(tutorialStepIndex > 0){ tutorialStepIndex--; renderTutorialStep(); }
+  document.getElementById('tourBackBtn').addEventListener('click', function(){
+    if(tourStepIndex > 0){ tourStepIndex--; renderTourStep(); }
   });
-  document.getElementById('tutorialSkipBtn').addEventListener('click', closeTutorial);
-  document.getElementById('replayTutorialBtn').addEventListener('click', openTutorial);
+  document.getElementById('tourSkipBtn').addEventListener('click', closeTour);
+  document.getElementById('replayTutorialBtn').addEventListener('click', openTour);
+  window.addEventListener('resize', function(){
+    if(tourHighlightedEl) tourPositionBubble(tourHighlightedEl);
+  });
 
   var tutorialAlreadySeen = false;
   try{ tutorialAlreadySeen = localStorage.getItem(TUTORIAL_SEEN_KEY) === '1'; }catch(e){}
-  if(!tutorialAlreadySeen) openTutorial();
+  if(!tutorialAlreadySeen) openTour();
 
   loadFavorites();
   updateSyncBanner();
@@ -4545,13 +4787,29 @@
     document.documentElement.setAttribute('data-theme', name);
     var meta = document.getElementById('themeColorMeta');
     if(meta) meta.setAttribute('content', THEME_COLORS[name] || THEME_COLORS.ledger);
-    document.querySelectorAll('#themePreviewSwitcher button').forEach(function(b){
+    document.querySelectorAll('#themePreviewSwitcher button[data-preview-theme]').forEach(function(b){
       b.style.outline = b.getAttribute('data-preview-theme') === name ? '2px solid currentColor' : 'none';
     });
     try{ localStorage.setItem(THEME_PREVIEW_KEY, name); }catch(e){}
   }
-  document.querySelectorAll('#themePreviewSwitcher button').forEach(function(b){
+  document.querySelectorAll('#themePreviewSwitcher button[data-preview-theme]').forEach(function(b){
     b.addEventListener('click', function(){ setPreviewTheme(this.getAttribute('data-preview-theme')); });
+  });
+  var themePreviewToggle = document.getElementById('themePreviewToggle');
+  var themePreviewPanel = document.getElementById('themePreviewPanel');
+  themePreviewToggle.addEventListener('click', function(){
+    var isOpen = themePreviewPanel.style.opacity === '1';
+    if(isOpen){
+      themePreviewPanel.style.transform = 'scale(0.85) translateY(-4px)';
+      themePreviewPanel.style.opacity = '0';
+      themePreviewPanel.style.pointerEvents = 'none';
+      themePreviewToggle.setAttribute('aria-expanded', 'false');
+    } else {
+      themePreviewPanel.style.transform = 'scale(1) translateY(0)';
+      themePreviewPanel.style.opacity = '1';
+      themePreviewPanel.style.pointerEvents = 'auto';
+      themePreviewToggle.setAttribute('aria-expanded', 'true');
+    }
   });
   var savedPreviewTheme = 'ledger';
   try{ savedPreviewTheme = localStorage.getItem(THEME_PREVIEW_KEY) || 'ledger'; }catch(e){}
