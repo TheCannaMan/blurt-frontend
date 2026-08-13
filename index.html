@@ -64,7 +64,7 @@
     --green:#46543F; --green-rgb:70,84,63;
     --gold:#A8823E; --gold-rgb:168,130,62;
     --error:#8C6B2F; --error-rgb:140,107,47;
-    --line:#E5E2D8; --muted:#85806F; --line-style:solid;
+    --line:#E5E2D8; --muted:#7A7566; --line-style:solid;
     --font-display:'Fraunces'; --font-mono:'Public Sans'; --font-body:'Public Sans';
   }
   /* Cyber Instrument: rugged dark hardware, luminous cyan/aqua on graphite */
@@ -76,7 +76,7 @@
     --green:#22C55E; --green-rgb:34,197,94;
     --gold:#3E8E8A; --gold-rgb:94,180,176;
     --error:#FF5C5C; --error-rgb:255,92,92;
-    --line:rgba(120,220,225,0.16); --muted:#5E7478; --line-style:solid;
+    --line:rgba(120,220,225,0.16); --muted:#698286; --line-style:solid;
     --font-display:'Chakra Petch'; --font-mono:'Share Tech Mono'; --font-body:'Inter';
   }
   *{box-sizing:border-box;}
@@ -302,7 +302,24 @@
   html[data-theme="instrument"] .chosen-row{
     background:var(--paper-dim); border:1px solid var(--line); border-left:2px solid var(--line);
     box-shadow:inset 0 1px 3px rgba(0,0,0,0.45); transition:border-color 0.18s ease, box-shadow 0.18s ease;
+    /* The base layout is a single horizontal row (image, text, price, button
+       side by side) — fine at full app width, but crushed into Instrument's
+       narrow ~190px grid tiles. A sale item's extra "was $X" text was enough
+       to push the select button half off-tile. Stacking vertically instead,
+       with a bigger image up top and the button spanning full width at the
+       bottom, actually fits the tile instead of fighting it. */
+    display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:8px;
+    padding:10px;
   }
+  html[data-theme="instrument"] .option-thumb,
+  html[data-theme="instrument"] .chosen-thumb{
+    width:100%; height:110px; border-radius:4px;
+  }
+  html[data-theme="instrument"] .option-info,
+  html[data-theme="instrument"] .chosen-info{ flex:none; width:100%; }
+  html[data-theme="instrument"] .option-price{ font-size:14px; }
+  html[data-theme="instrument"] .select-btn{ width:100%; padding:9px; text-align:center; }
+  html[data-theme="instrument"] .chosen-meta{ margin-top:2px; }
   html[data-theme="instrument"] .option-row:hover{ border-left-color:var(--pink); }
   html[data-theme="instrument"] .option-row.selected,
   html[data-theme="instrument"] .chosen-row{
@@ -314,6 +331,13 @@
   }
   html[data-theme="instrument"] .select-btn:hover{ border-color:var(--pink); box-shadow:0 0 10px -3px rgba(var(--pink-rgb),0.6); }
   html[data-theme="instrument"] .select-btn.is-selected{ background:var(--pink); border-color:var(--pink); }
+  /* --green stays untouched globally — it's also used as plain readable
+     text against dark paper elsewhere (totals, status messages), which
+     needs to stay light. Only this one component uses green as a solid
+     fill with text on top, and only in this theme does that specific pairing
+     (on-accent text on green) fail contrast — so the fix is scoped to just
+     this button, using dark ink text instead of light on-accent text. */
+  html[data-theme="instrument"] .made-this-btn{ color:var(--ink); }
   html[data-theme="instrument"] button:focus-visible,
   html[data-theme="instrument"] input:focus-visible,
   html[data-theme="instrument"] a:focus-visible{
@@ -870,6 +894,7 @@
   .item-query-edit{
     flex:1; font-size:14.5px; font-weight:600; padding:4px 8px; border-radius:6px;
     border:1px solid var(--pink); font-family:var(--font-body),sans-serif; color:var(--text);
+    background:var(--paper);
   }
   .item-query-edit:focus{ outline:2px solid var(--pink); outline-offset:1px; }
   .remove-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
