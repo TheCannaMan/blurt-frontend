@@ -2293,8 +2293,15 @@
       '<div class="modal-detail-row"><span>This month</span><span>' + fmt(stats.thisMonth) + '</span></div>' +
       '<div class="modal-detail-row"><span>All time</span><span>' + fmt(stats.allTime) + '</span></div>' +
       '<div class="modal-detail-row"><span>Smart picks</span><span>' + stats.pickCount + '</span></div>' +
-      '<p style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:10px;">Counted whenever you picked something cheaper than the priciest option shown for that search.</p>'
+      '<p style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:10px;">Counted the first time you pick something cheaper than the priciest option shown for that search — re-picking the same item later doesn\'t count again.</p>' +
+      '<button class="replay-tutorial-btn" id="resetSavingsBtn" style="margin-top:12px;">reset savings history</button>'
     );
+    document.getElementById('resetSavingsBtn').addEventListener('click', function(){
+      var ok = window.confirm('Clear your savings history? This can\'t be undone.');
+      if(!ok) return;
+      try{ localStorage.removeItem(SAVINGS_LOG_KEY); }catch(e){}
+      openSavingsModal();
+    });
   }
 
   // ---------- Favorites (manual, user-curated — nothing tracked automatically) ----------
@@ -2361,6 +2368,12 @@
     if(!product) return;
 
     var prevTotal = computeResolvedTotal();
+    // Was this item already resolved before this click? If so, this is a
+    // "change my mind" re-pick, not a first-time decision — savings should
+    // only ever be credited once per item, the first time it resolves, or
+    // re-opening "change option" and clicking through a few times would
+    // keep stacking up savings for what's really the same single choice.
+    var isFirstResolution = (it.status !== 'resolved');
 
     it.selectedProductId = productId;
     it.priceAtSelection = product.promoPrice || product.regularPrice;
@@ -2372,13 +2385,16 @@
     if(!it.qty) it.qty = 1;
 
     // Savings reflection: if this pick was cheaper than the priciest option
-    // actually shown for this search, log the difference. Purely a personal,
-    // on-demand reflection — never surfaced as an unprompted notification.
-    var pricesShown = it.results.map(function(p){ return p.promoPrice || p.regularPrice; });
-    var priciestShown = Math.max.apply(null, pricesShown);
-    var savedThisPick = (priciestShown - it.priceAtSelection) * it.qty;
-    if(savedThisPick > PRICE_EPSILON){
-      recordSavings(savedThisPick);
+    // actually shown for this search, log the difference — but only the
+    // first time this item resolves. Purely a personal, on-demand
+    // reflection — never surfaced as an unprompted notification.
+    if(isFirstResolution){
+      var pricesShown = it.results.map(function(p){ return p.promoPrice || p.regularPrice; });
+      var priciestShown = Math.max.apply(null, pricesShown);
+      var savedThisPick = (priciestShown - it.priceAtSelection) * it.qty;
+      if(savedThisPick > PRICE_EPSILON){
+        recordSavings(savedThisPick);
+      }
     }
 
     // Gentle nudge: only fires the moment a pick actually crosses you over
