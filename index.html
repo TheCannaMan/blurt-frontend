@@ -269,6 +269,32 @@
   html[data-theme="reserve"] .chosen-meta{ grid-column:2; }
 
   @media (min-width:900px){
+    html[data-theme="ledger"] .app,
+    html[data-theme="aperture"] .app,
+    html[data-theme="signal"] .app{ max-width:640px; }
+    html[data-theme="ledger"] #shopSection,
+    html[data-theme="aperture"] #shopSection,
+    html[data-theme="signal"] #shopSection{
+      display:grid; grid-template-columns:260px 1fr; grid-template-rows:auto auto auto auto auto auto 1fr;
+      column-gap:32px; align-items:start;
+    }
+    html[data-theme="ledger"] #locationBar, html[data-theme="aperture"] #locationBar, html[data-theme="signal"] #locationBar{ grid-column:1; grid-row:1; }
+    html[data-theme="ledger"] .mic-zone, html[data-theme="aperture"] .mic-zone, html[data-theme="signal"] .mic-zone{ grid-column:1; grid-row:2; }
+    html[data-theme="ledger"] .total-bar, html[data-theme="aperture"] .total-bar, html[data-theme="signal"] .total-bar{ grid-column:1; grid-row:3; margin-left:0; margin-right:0; }
+    html[data-theme="ledger"] #budgetRow, html[data-theme="aperture"] #budgetRow, html[data-theme="signal"] #budgetRow{ grid-column:1; grid-row:4; margin-left:0; margin-right:0; }
+    html[data-theme="ledger"] #budgetEditRow, html[data-theme="aperture"] #budgetEditRow, html[data-theme="signal"] #budgetEditRow{ grid-column:1; grid-row:5; margin-left:0; margin-right:0; }
+    html[data-theme="ledger"] #timeEstimateRow, html[data-theme="aperture"] #timeEstimateRow, html[data-theme="signal"] #timeEstimateRow{ grid-column:1; grid-row:6; }
+    html[data-theme="ledger"] #startShoppingModeBtn, html[data-theme="aperture"] #startShoppingModeBtn, html[data-theme="signal"] #startShoppingModeBtn{ grid-column:1; grid-row:7; }
+    html[data-theme="ledger"] .list-header, html[data-theme="aperture"] .list-header, html[data-theme="signal"] .list-header{ grid-column:2; grid-row:1; }
+    html[data-theme="ledger"] #list, html[data-theme="aperture"] #list, html[data-theme="signal"] #list{ grid-column:2; grid-row:2 / 8; }
+    /* Desktop has no thumb-reach concern, so the bottom nav (a mobile-only
+       concept) never applies here regardless of viewport width breakpoints
+       elsewhere — the top tabs are the correct, expected pattern at this size. */
+    .bottom-nav{ display:none !important; }
+    .tab-bar{ display:flex !important; }
+  }
+
+  @media (min-width:900px){
     html[data-theme="reserve"] .app{ max-width:640px; }
     html[data-theme="reserve"] #shopSection{
       display:grid; grid-template-columns:260px 1fr; grid-template-rows:auto auto auto auto auto auto 1fr;
@@ -426,6 +452,14 @@
   html[data-theme="instrument"] #list{
     display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
     gap:12px; padding:14px 16px; counter-reset:blurtmodule;
+  }
+  /* Instrument's module grid already reflows itself via auto-fit — it just
+     needs more room to actually use at desktop widths, not a restructure.
+     The mic dock deliberately stays its normal width: it's a centered
+     circular control, not something that benefits from stretching edge to
+     edge just because the viewport can. */
+  @media (min-width:900px){
+    html[data-theme="instrument"] .app{ max-width:960px; }
   }
   html[data-theme="instrument"] .item-card{
     counter-increment:blurtmodule; position:relative;
@@ -867,6 +901,15 @@
     flex-direction:column;
   }
   .shopping-mode-overlay.open{ display:flex; }
+  /* Deliberately stays narrow even at desktop widths — Shopping Mode (and
+     Recipe Mode, which shares these same classes) is built for one-handed
+     use while actually walking a store or standing at a stove, not for
+     taking advantage of a wide monitor. */
+  @media (min-width:900px){
+    .shopping-mode-header, .shopping-mode-list, .shopping-mode-footer{
+      max-width:480px; width:100%; margin-left:auto; margin-right:auto;
+    }
+  }
   .shopping-mode-header{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding:16px 18px; background:var(--ink); color:var(--on-accent); flex-shrink:0;
@@ -898,7 +941,17 @@
     margin-bottom:10px; background:var(--paper); border:2px solid var(--line); cursor:pointer;
     transition:background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
   }
-  .shopping-item-row.picked{ background:rgba(var(--green-rgb),0.08); border-color:var(--green); opacity:0.65; }
+  .shopping-item-row.picked{
+    background:rgba(var(--green-rgb),0.08); border-color:var(--green); opacity:0.65;
+    padding-top:10px; padding-bottom:10px;
+    animation:shoppingRowSettle 0.28s ease;
+  }
+  .shopping-item-row.picked .shopping-item-meta{ display:none; }
+  @keyframes shoppingRowSettle{
+    0%{ opacity:0.4; transform:scale(0.96); }
+    100%{ opacity:0.65; transform:scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce){ .shopping-item-row.picked{ animation:none; } }
   .shopping-item-checkbox{
     width:34px; height:34px; border-radius:50%; border:3px solid var(--line); flex-shrink:0;
     display:flex; align-items:center; justify-content:center; color:var(--on-accent);
@@ -1295,6 +1348,21 @@
   }
   .reroll-btn:hover{ background:var(--pink-deep); }
   .recipe-search-results{ margin-top:8px; display:flex; flex-direction:column; gap:8px; padding-bottom:10px; }
+  /* "Recipes can use larger editorial grids" at desktop widths — same DOM,
+     same data, just laid out as photo-forward cards instead of compact
+     rows once there's actually room for it. */
+  @media (min-width:900px){
+    .recipe-search-results{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:16px;
+    }
+    .recipe-result-row{
+      flex-direction:column; align-items:stretch; text-align:center; padding:12px; gap:8px;
+    }
+    .recipe-result-thumb{ width:100%; height:150px; border-radius:10px; }
+    .recipe-result-name{ font-size:14px; font-weight:600; }
+    .recipe-result-row .recipe-add-btn-sm,
+    .recipe-result-row .recipe-save-btn{ width:100%; }
+  }
   .recipe-result-row{
     display:flex; align-items:center; gap:10px; background:var(--paper); border:1px solid var(--line);
     border-radius:8px; padding:8px 10px;
@@ -1614,7 +1682,7 @@
       <div class="info-panel" id="infoPanel">
         Say or type something and Blurt pulls real matches from your nearest Kroger-family store (Fred Meyer, QFC, Ralphs, and other Kroger banners) — live from Kroger's product API. You can blurt more than one item at once, like "carrots and potatoes." Pick a price and it collapses down to your choice; Blurt will periodically recheck and flag it if a better price shows up. Nothing here is a real cart — it's a running estimate. Aisle numbers, when Kroger has them mapped for a store, let you sort your list into a rough shopping order.
         <br><br><strong>About your location:</strong> If you check "remember this ZIP" when setting your location, Blurt will bring it back automatically each time you open the app — nothing more precise than your ZIP is ever saved, and you can uncheck that box anytime. If it's been about an hour since your location was last checked, the location bar will still gently highlight and suggest tapping Update — handy if you built your list at home and are now shopping somewhere else. Tapping Update re-checks the nearest store, keeps any picks that are still available there, and reopens anything that isn't as a fresh choice.
-        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "remove bananas" (removes a matching item), "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), "start/exit shopping mode", and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
+        <br><br><strong>Voice/typed commands:</strong> "clear list", "refresh location", "recheck prices", "clear picked up", "pick cheapest for all", "remove bananas" (removes a matching item), "find cheaper eggs" (switches a matching item to its cheapest option), "what's my total", "set budget to $50", "increase/decrease budget by $10", "clear budget", "what's my budget", "recipe for chicken parmesan" (jumps to Recipe Search), "surprise me" (rolls a random recipe), "start/exit shopping mode", and "go to shopping/recipes/saved" all work as spoken or typed commands instead of being added as items.
         <button class="replay-tutorial-btn" id="replayTutorialBtn">▶ replay the welcome tutorial</button>
       </div>
     </header>
@@ -1809,7 +1877,7 @@
       </button>
     </div>
     <div class="footer-tagline">tap the mic before it slips your mind</div>
-    <span id="versionTag">v3.2.0</span>
+    <span id="versionTag">v3.4.0</span>
   </footer>
 </div>
 
@@ -3237,6 +3305,42 @@
   // matches the stored query text exactly. Confirms out loud either way,
   // since a silent removal (or silent non-removal) leaves you guessing
   // whether it worked.
+  // Voice/typed "find cheaper X" — re-picks a specific already-resolved
+  // item's cheapest option, reusing the exact same selection logic
+  // "pick cheapest for all" uses, just scoped to one item instead of the
+  // whole list.
+  function runFindCheaperCommand(rawName){
+    var name = rawName.trim().replace(/^(a|an|the)\s+/i, '').trim();
+    if(!name) return false;
+    var needle = name.toLowerCase();
+    var speak = function(text){
+      if(!('speechSynthesis' in window)) return;
+      try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }catch(e){}
+    };
+    var matches = items.filter(function(i){
+      return i.query.toLowerCase().indexOf(needle) !== -1 && i.status === 'resolved' && i.results && i.results.length;
+    });
+    if(matches.length === 0){
+      speak("I couldn't find " + name + " with other options to compare.");
+      return true;
+    }
+    if(matches.length > 1){
+      speak('A few things match "' + name + '" — tap the one you mean to change its option.');
+      return true;
+    }
+    var it = matches[0];
+    var opts = sortedOptions(it);
+    var cheapest = opts[0];
+    var cheapestPrice = cheapest ? (cheapest.promoPrice || cheapest.regularPrice) : null;
+    if(!cheapest || cheapestPrice >= it.priceAtSelection - PRICE_EPSILON){
+      speak("You're already on the cheapest option for " + it.query + ".");
+      return true;
+    }
+    selectOption(it.id, cheapest.productId);
+    speak('Switched ' + it.query + ' to ' + fmt(cheapestPrice) + '.');
+    return true;
+  }
+
   function runRemoveItemCommand(rawName){
     var name = rawName.trim().replace(/^(a|an|the)\s+/i, '').replace(/\s+(please|from (?:the|my) list)\.?$/i, '').trim();
     if(!name) return false;
@@ -3300,6 +3404,9 @@
 
     var removeMatch = trimmedOriginal.match(/^(?:remove|delete|take off)\s+(.+?)(?:\s+from (?:the|my) list)?$/i);
     if(removeMatch){ return runRemoveItemCommand(removeMatch[1]); }
+
+    var findCheaperMatch = trimmedOriginal.match(/^find (?:a )?cheaper\s+(.+)$/i);
+    if(findCheaperMatch){ return runFindCheaperCommand(findCheaperMatch[1]); }
 
     return false;
   }
@@ -4753,7 +4860,14 @@
   // Shared by both "add a saved recipe" and "quick-add straight from search
   // results" — pushes a plain array of ingredient names into the shop list.
   function pushIngredientNamesToShop(names){
+    var addedCount = 0, alreadyOnListCount = 0;
+    var existingNames = {};
+    items.forEach(function(i){ existingNames[i.query.toLowerCase()] = true; });
     names.forEach(function(name){
+      if(existingNames[name.toLowerCase()]){
+        alreadyOnListCount++;
+        return;
+      }
       var item = {
         id: 'i'+Date.now()+Math.random().toString(36).slice(2,7),
         query: name,
@@ -4764,10 +4878,22 @@
         budgetNotice: null, editingName: false, skipped: false, priceHistory: []
       };
       items.unshift(item);
+      existingNames[name.toLowerCase()] = true; // guards against duplicate ingredients within the same recipe too
+      addedCount++;
       if(item.status === 'loading') fetchOptions(item.id);
     });
     render(); saveList();
     setActiveTab('shop');
+
+    // Smart feedback rather than silently dumping everything in — you
+    // genuinely can't tell at a glance whether a bulk add just quietly
+    // duplicated half your list.
+    if(addedCount > 0 || alreadyOnListCount > 0){
+      var parts = [];
+      if(addedCount > 0) parts.push(addedCount + ' ingredient' + (addedCount===1?'':'s') + ' added');
+      if(alreadyOnListCount > 0) parts.push(alreadyOnListCount + ' already on your list');
+      showToast(parts.join(' · '));
+    }
   }
 
   function renderRecipeSearchResults(){
