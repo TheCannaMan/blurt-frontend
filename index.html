@@ -580,6 +580,21 @@
   .settings-close-btn:hover{ color:var(--pink-deep); background:var(--paper); }
   .settings-close-btn svg{ width:16px; height:16px; }
 
+  .you-identity-card{
+    display:flex; align-items:center; gap:12px; margin-bottom:14px;
+    padding:12px 14px; background:linear-gradient(135deg, rgba(var(--pink-rgb),0.08), rgba(var(--gold-rgb),0.08));
+    border:1px solid var(--line); border-radius:12px;
+  }
+  .you-avatar{
+    width:40px; height:40px; border-radius:50%; flex-shrink:0;
+    background:var(--paper-dim); border:1.5px solid var(--line); color:var(--muted);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display),sans-serif; font-weight:700; font-size:16px;
+  }
+  .you-avatar.signed-in{ background:var(--pink); border-color:var(--pink); color:var(--on-accent); }
+  .you-name{ font-family:var(--font-display),sans-serif; font-weight:700; font-size:14.5px; color:var(--text); }
+  .you-sub{ font-size:11px; color:var(--text-soft); line-height:1.4; margin-top:2px; }
+
   .your-data-card{
     background:var(--paper); border:1px solid var(--line); border-radius:10px;
     padding:12px 14px; margin-bottom:14px;
@@ -897,7 +912,7 @@
      This is the "ten minutes in the aisles" view, deliberately built to
      look and feel nothing like the list-building view. */
   .shopping-mode-overlay{
-    display:none; position:fixed; inset:0; background:var(--paper); z-index:200;
+    display:none; position:fixed; inset:0; background:var(--paper); z-index:260;
     flex-direction:column;
   }
   .shopping-mode-overlay.open{ display:flex; }
@@ -1279,7 +1294,7 @@
   @media (max-width:680px){
     .bottom-nav{ display:flex; }
     .tab-bar{ display:none; }
-    .receipt{ padding-bottom:76px; }
+    .receipt{ padding-bottom:calc(92px + env(safe-area-inset-bottom)); }
   }
   html[data-theme="instrument"] .bottom-nav{ display:none !important; }
   html[data-theme="instrument"] .tab-bar{ display:flex; }
@@ -1614,6 +1629,14 @@
           </button>
         </div>
 
+        <div class="you-identity-card">
+          <div class="you-avatar" id="youAvatar">?</div>
+          <div class="you-identity-text">
+            <div class="you-name" id="youName">Not signed in</div>
+            <div class="you-sub" id="youSub">Sign in with Google below to sync across devices — and later, link your Kroger account here too.</div>
+          </div>
+        </div>
+
         <div class="your-data-card">
           <div class="backup-label">Your data</div>
           <ul class="your-data-list">
@@ -1877,7 +1900,7 @@
       </button>
     </div>
     <div class="footer-tagline">tap the mic before it slips your mind</div>
-    <span id="versionTag">v3.4.0</span>
+    <span id="versionTag">v3.4.1</span>
   </footer>
 </div>
 
@@ -2958,6 +2981,15 @@
     if(document.visibilityState === 'visible' && (shoppingMode || recipeModeCurrentRecipe)) requestWakeLock();
   });
 
+  // Hides the bottom nav while a full-screen mode is active — it shouldn't
+  // be reachable underneath Shopping/Recipe Mode anyway (Exit is the way
+  // out), and this closes off the whole class of z-index conflicts a fixed
+  // nav bar can cause against other fixed overlays.
+  function setBottomNavVisible(visible){
+    var nav = document.getElementById('bottomNav');
+    if(nav) nav.style.display = visible ? '' : 'none';
+  }
+
   function enterShoppingMode(){
     var resolvedCount = items.filter(function(i){ return i.status === 'resolved'; }).length;
     if(resolvedCount === 0){
@@ -2966,6 +2998,7 @@
     }
     shoppingMode = true;
     document.getElementById('shoppingModeOverlay').classList.add('open');
+    setBottomNavVisible(false);
     requestWakeLock();
     renderShoppingMode();
     logEvent('shopping_mode_started');
@@ -2975,6 +3008,7 @@
     var pickedCount = resolved.filter(function(i){ return i.picked; }).length;
     shoppingMode = false;
     document.getElementById('shoppingModeOverlay').classList.remove('open');
+    setBottomNavVisible(true);
     releaseWakeLock();
     logEvent(pickedCount === resolved.length && resolved.length > 0 ? 'shopping_mode_completed' : 'shopping_mode_exited');
     maybeShowPostShopFeedback(pickedCount, resolved.length);
@@ -2999,12 +3033,14 @@
     recipeModeCurrentRecipe = recipe;
     recipeModeChecked = {};
     document.getElementById('recipeModeOverlay').classList.add('open');
+    setBottomNavVisible(false);
     requestWakeLock();
     renderRecipeMode();
     logEvent('recipe_mode_started');
   }
   function exitRecipeMode(){
     document.getElementById('recipeModeOverlay').classList.remove('open');
+    setBottomNavVisible(true);
     releaseWakeLock();
     recipeModeCurrentRecipe = null;
     logEvent('recipe_mode_exited');
@@ -4416,6 +4452,25 @@
     banner.style.display = (currentUser || dismissed) ? 'none' : 'flex';
   }
 
+  function renderYouSection(){
+    var nameEl = document.getElementById('youName');
+    var subEl = document.getElementById('youSub');
+    var avatarEl = document.getElementById('youAvatar');
+    if(!nameEl) return;
+    if(currentUser){
+      var displayName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Signed in');
+      nameEl.textContent = displayName;
+      subEl.textContent = (currentUser.email || 'Synced across your devices.') + ' — Kroger account linking will show up here too, once that\'s connected.';
+      avatarEl.textContent = displayName.charAt(0).toUpperCase();
+      avatarEl.classList.add('signed-in');
+    } else {
+      nameEl.textContent = 'Not signed in';
+      subEl.textContent = 'Sign in with Google below to sync across devices — and later, link your Kroger account here too.';
+      avatarEl.textContent = '?';
+      avatarEl.classList.remove('signed-in');
+    }
+  }
+
   function updateAccountUI(){
     var signedOut = document.getElementById('accountSignedOut');
     var signedIn = document.getElementById('accountSignedIn');
@@ -4428,6 +4483,7 @@
       signedOut.style.display = 'block';
       signedIn.style.display = 'none';
     }
+    renderYouSection();
     updateSyncBanner();
   }
 
@@ -4631,6 +4687,10 @@
     document.getElementById('bottomNavShop').classList.toggle('active', tab === 'shop');
     document.getElementById('bottomNavRecipes').classList.toggle('active', tab === 'search');
     document.getElementById('bottomNavSaved').classList.toggle('active', tab === 'saved');
+    // Arriving at any real tab means leaving "You" — it was getting stuck
+    // open otherwise, since it's an inline panel rather than its own section.
+    settingsPanel.classList.remove('open');
+    document.getElementById('bottomNavYou').classList.remove('active');
   }
   document.getElementById('tabShopBtn').addEventListener('click', function(){ setActiveTab('shop'); });
   document.getElementById('tabSearchBtn').addEventListener('click', function(){ setActiveTab('search'); });
@@ -4640,9 +4700,15 @@
   document.getElementById('bottomNavSaved').addEventListener('click', function(){ setActiveTab('saved'); });
   // "You" always takes you to Settings, the same way a real profile tab
   // would — not a toggle, since arriving from a nav bar should be a clear
-  // destination, not a maybe-open-maybe-close ambiguity.
+  // destination, not a maybe-open-maybe-close ambiguity. Also properly
+  // marks itself as the active nav item, matching the other three.
   document.getElementById('bottomNavYou').addEventListener('click', function(){
+    document.getElementById('bottomNavShop').classList.remove('active');
+    document.getElementById('bottomNavRecipes').classList.remove('active');
+    document.getElementById('bottomNavSaved').classList.remove('active');
+    document.getElementById('bottomNavYou').classList.add('active');
     settingsPanel.classList.add('open');
+    renderYouSection();
     settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   // The elevated Blurt button — voice capture reachable from anywhere, per
