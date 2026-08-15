@@ -394,6 +394,35 @@
     background:var(--paper-dim); border-bottom:1px solid var(--line); margin:0; padding:6px 16px;
   }
 
+  /* Signal's budget-as-physical-object: a flowing gradient bar instead of
+     Instrument's segmented dial — reuses the exact same --pct / data-over
+     mechanism the render function already drives, just a different visual
+     read on the same real data. Calm by default; only pulses once it's
+     actually crossed, never as a repeated warning. */
+  html[data-theme="signal"] .budget-gauge{
+    display:block; width:64px; height:8px; border-radius:6px; flex-shrink:0;
+    background:var(--paper-dim); position:relative; overflow:hidden;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,0.3);
+  }
+  html[data-theme="signal"] .budget-gauge::after{
+    content:""; position:absolute; inset:0; border-radius:6px;
+    width:calc(var(--pct,0) * 1%);
+    background:linear-gradient(90deg, var(--pink), var(--gold));
+    box-shadow:0 0 8px -1px rgba(var(--pink-rgb),0.7);
+    transition:width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  html[data-theme="signal"] .budget-gauge[data-over="1"]::after{
+    background:linear-gradient(90deg, var(--error), var(--pink-deep));
+    animation:signalBudgetPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes signalBudgetPulse{
+    0%,100%{ box-shadow:0 0 8px -1px rgba(var(--error-rgb),0.6); }
+    50%{ box-shadow:0 0 14px 1px rgba(var(--error-rgb),0.9); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    html[data-theme="signal"] .budget-gauge[data-over="1"]::after{ animation:none; }
+  }
+
   html[data-theme="instrument"] #list{
     display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
     gap:12px; padding:14px 16px; counter-reset:blurtmodule;
@@ -411,6 +440,29 @@
   }
   html[data-theme="instrument"] .list-header{
     background:var(--paper-dim); border:1px solid var(--line); border-radius:2px; padding:8px 12px; margin:12px 16px 0;
+  }
+
+  /* Signal's item cards — soft, individually-boxed cards rather than a flat
+     receipt-style list, each settling into place rather than just appearing.
+     Unlike the global beta-fx pop-in (an opt-in flourish for the other four,
+     more restrained themes), this is always-on here since motion answering
+     "what just happened" is core to Signal's identity, not an extra. */
+  html[data-theme="signal"] .item-card{
+    border:none; border-radius:14px; background:var(--paper); padding:14px 16px; margin-bottom:10px;
+    box-shadow:0 8px 20px -14px rgba(0,0,0,0.6);
+  }
+  html[data-theme="signal"] .item-card:last-child{ margin-bottom:0; }
+  html[data-theme="signal"] .chosen-row{
+    border-radius:8px; padding-left:10px;
+    box-shadow:inset 3px 0 0 var(--pink), 0 0 12px -6px rgba(var(--pink-rgb),0.5);
+    animation:signalRowIn 0.35s cubic-bezier(0.34,1.2,0.64,1);
+  }
+  @keyframes signalRowIn{
+    0%{ opacity:0; transform:translateY(6px) scale(0.98); }
+    100%{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    html[data-theme="signal"] .chosen-row{ animation:none; }
   }
 
   html[data-theme="instrument"] .mic-zone{
@@ -483,6 +535,16 @@
     display:none; margin-top:14px; background:var(--paper-dim);
     border:1px var(--line-style) var(--line); border-radius:10px; padding:14px 16px;
   }
+  .settings-panel-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+    padding-bottom:10px; border-bottom:1px var(--line-style) var(--line);
+  }
+  .settings-close-btn{
+    background:none; border:none; color:var(--muted); cursor:pointer; padding:4px;
+    display:flex; align-items:center; justify-content:center; border-radius:6px;
+  }
+  .settings-close-btn:hover{ color:var(--pink-deep); background:var(--paper); }
+  .settings-close-btn svg{ width:16px; height:16px; }
   .settings-panel.open{ display:block; }
   .settings-panel p{ margin:0 0 10px; font-size:12px; line-height:1.55; color:var(--text-soft); }
   .settings-field{ margin-bottom:10px; }
@@ -888,12 +950,12 @@
     html.beta-fx .blurt-chip{ animation:none; opacity:1; transform:none; }
   }
 
-  /* Signal's signature interaction — a genuinely live, audio-reactive
-     waveform replacing the mic icon while listening, driven by real
-     microphone input via the Web Audio API (not a canned CSS pulse). Hidden
-     entirely in every other theme; if mic visualization access ever fails
-     for any reason, voice capture itself is completely unaffected, since
-     SpeechRecognition manages its own separate audio stream regardless. */
+  /* Signal's signature interaction — a waveform-style visualization replacing
+     the mic icon while listening. Originally driven by real microphone data
+     via a second audio stream, but that destabilized Speech Recognition
+     itself (two simultaneous claims on the mic caused it to cut off early) —
+     now purely randomized/procedural, so it can never touch or interfere
+     with actual voice capture. Hidden entirely in every other theme. */
   .signal-waveform{ display:none; }
   html[data-theme="signal"] .mic-btn.listening .signal-waveform{
     display:flex; align-items:center; justify-content:center; gap:3px;
@@ -902,7 +964,7 @@
   html[data-theme="signal"] .mic-btn.listening > svg{ opacity:0; }
   .signal-wave-bar{
     width:3px; height:8%; min-height:4px; background:var(--on-accent); border-radius:2px;
-    transition:height 0.05s ease;
+    transition:height 0.11s ease;
   }
 
   html[data-theme="signal"] body{
@@ -1215,7 +1277,6 @@
   .recipe-add-btn:hover{ background:var(--pink-deep); }
   .recipe-link{ font-size:11.5px; color:var(--text-soft); text-decoration:underline; }
   .recipe-link:hover{ color:var(--pink-deep); }
-  .recipe-empty{ text-align:center; padding:24px 10px 10px; color:var(--muted); font-size:13px; }
 
   @media (prefers-reduced-motion: reduce){ .ring, .spinner, .location-refresh-btn{ animation:none !important; } }
 
@@ -1377,6 +1438,12 @@
       </div>
 
       <div class="settings-panel" id="settingsPanel">
+        <div class="settings-panel-head">
+          <div class="backup-label" style="margin:0;">Setup</div>
+          <button class="settings-close-btn" id="settingsCloseBtn" aria-label="Close setup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
         <p>This is the address of your Blurt backend — the small service that talks to Kroger on the app's behalf. Your location (used for finding nearby stores) is set from the main screen, not here.</p>
         <div class="settings-field">
           <label for="backendUrl">Backend URL</label>
@@ -4005,6 +4072,7 @@
   // Settings panel (backend URL only now)
   var settingsPanel = document.getElementById('settingsPanel');
   document.getElementById('settingsToggle').addEventListener('click', function(){ settingsPanel.classList.toggle('open'); });
+  document.getElementById('settingsCloseBtn').addEventListener('click', function(){ settingsPanel.classList.remove('open'); });
 
   document.getElementById('btnSave').addEventListener('click', function(){
     settings.backendUrl = document.getElementById('backendUrl').value.trim() || settings.backendUrl;
@@ -4507,6 +4575,12 @@
 
   function renderRecipeSearchResults(){
     var resultsEl = document.getElementById('recipeSearchResults');
+    if(recipeSearchResults.length === 0){
+      resultsEl.innerHTML = '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>' +
+        '<p>Hungry?<br>Search a recipe, or roll the dice with "Surprise me."</p></div>';
+      return;
+    }
     resultsEl.innerHTML = recipeSearchResults.map(function(meal){
       var alreadySaved = recipes.some(function(r){ return r.sourceId === meal.idMeal; });
       return '<div class="recipe-result-row">' +
@@ -4650,11 +4724,15 @@
     });
 
     if(recipes.length === 0){
-      listEl.innerHTML = '<div class="recipe-empty">No saved recipes or lists yet.<br>Search a recipe, or build a list from scratch.</div>';
+      listEl.innerHTML = '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' +
+        '<p>Nothing saved yet.<br>Recipes and lists you want to keep will live here.</p></div>';
       return;
     }
     if(visible.length === 0){
-      listEl.innerHTML = '<div class="recipe-empty">Nothing in this filter yet.</div>';
+      listEl.innerHTML = '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' +
+        '<p>Nothing in this filter yet.</p></div>';
       return;
     }
 
@@ -4792,62 +4870,32 @@
     }, 15000);
   }
 
-  // ---------- Signal theme: live audio-reactive waveform ----------
-  // A separate getUserMedia stream purely for visualization — SpeechRecognition
-  // manages its own internal audio access for actual transcription, so this
-  // is additive, not a replacement. If it fails for any reason (permission,
-  // unsupported browser), voice capture itself is completely unaffected.
-  var signalAudioCtx = null;
-  var signalAnalyser = null;
-  var signalMicStream = null;
-  var signalWaveformRAF = null;
+  // ---------- Signal theme: waveform animation ----------
+  // Originally pulled real microphone data via a second getUserMedia stream
+  // running alongside Speech Recognition's own internal audio capture — but
+  // two simultaneous claims on the microphone destabilized recognition
+  // itself, cutting listening short before it could pick up a full sentence.
+  // Voice input actually working is non-negotiable; a purely decorative
+  // waveform isn't worth risking that. This version fakes lively, randomized
+  // bar movement instead — visually still reads as "alive," touches the
+  // microphone exactly zero times, so it cannot interfere with anything.
+  var signalWaveformInterval = null;
 
   function startSignalWaveform(){
     if(document.documentElement.getAttribute('data-theme') !== 'signal') return;
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
-      signalMicStream = stream;
-      var AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if(!AudioCtx) return;
-      signalAudioCtx = new AudioCtx();
-      var source = signalAudioCtx.createMediaStreamSource(stream);
-      signalAnalyser = signalAudioCtx.createAnalyser();
-      signalAnalyser.fftSize = 64;
-      source.connect(signalAnalyser);
-      renderSignalWaveform();
-    }).catch(function(){ /* visualization is optional — nothing else depends on it */ });
-  }
-
-  function renderSignalWaveform(){
-    if(!signalAnalyser) return;
-    var bufferLength = signalAnalyser.frequencyBinCount;
-    var dataArray = new Uint8Array(bufferLength);
     var bars = document.querySelectorAll('#signalWaveform .signal-wave-bar');
     if(bars.length === 0) return;
-    var step = Math.max(1, Math.floor(bufferLength / bars.length));
-    function draw(){
-      if(!signalAnalyser) return;
-      signalAnalyser.getByteFrequencyData(dataArray);
-      bars.forEach(function(bar, i){
-        var v = dataArray[i * step] || 0;
-        bar.style.height = Math.max(8, (v / 255) * 100) + '%';
+    function tick(){
+      bars.forEach(function(bar){
+        bar.style.height = (15 + Math.random() * 75) + '%';
       });
-      signalWaveformRAF = requestAnimationFrame(draw);
     }
-    draw();
+    tick();
+    signalWaveformInterval = setInterval(tick, 120);
   }
 
   function stopSignalWaveform(){
-    if(signalWaveformRAF){ cancelAnimationFrame(signalWaveformRAF); signalWaveformRAF = null; }
-    if(signalMicStream){
-      signalMicStream.getTracks().forEach(function(t){ t.stop(); });
-      signalMicStream = null;
-    }
-    if(signalAudioCtx){
-      try{ signalAudioCtx.close(); }catch(e){}
-      signalAudioCtx = null;
-    }
-    signalAnalyser = null;
+    if(signalWaveformInterval){ clearInterval(signalWaveformInterval); signalWaveformInterval = null; }
     document.querySelectorAll('#signalWaveform .signal-wave-bar').forEach(function(bar){ bar.style.height = '8%'; });
   }
 
@@ -5089,6 +5137,7 @@
   loadAll();
   tryRestoreRememberedZip();
   loadRandomCategories();
+  renderRecipeSearchResults(); // shows the "Hungry?" invitation before any search happens
   logEvent('app_opened');
 
   // ---------- PREVIEW-ONLY theme switcher (remove with the switcher markup above) ----------
