@@ -29,7 +29,7 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#B23A2E" id="themeColorMeta">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Share+Tech+Mono&family=Outfit:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Ledger (default): receipt-inspired, warm ivory + ink + stamp red */
   :root{
@@ -78,6 +78,24 @@
     --error:#FF5C5C; --error-rgb:255,92,92;
     --line:rgba(120,220,225,0.16); --muted:#698286; --line-style:solid;
     --font-display:'Chakra Petch'; --font-mono:'Share Tech Mono'; --font-body:'Inter';
+  }
+  /* Signal (beta): the most advanced, voice-native identity — the capture
+     moment itself (voice becoming structured reality) is the organizing
+     idea, not a static mood. Deep indigo base, warm coral accent + violet
+     secondary. --on-accent is deliberately DARK here (not light like the
+     other four) — Signal's accent colors are brighter/more saturated, so
+     dark text reads far better on top of them; verified by contrast math,
+     not by eye. */
+  html[data-theme="signal"]{
+    --ink:#120E1F; --ink-rgb:18,14,31; --ink-soft:#1C1730;
+    --text:#F1EDFF; --text-soft:#B5ACD6;
+    --paper:#1E1832; --paper-dim:#170F28; --on-accent:#150F24;
+    --pink:#FF6B5B; --pink-rgb:255,107,91; --pink-deep:#E14C3C; --pink-deep-rgb:225,76,60; --pink-deep-2:#B23A2D;
+    --green:#3DDC97; --green-rgb:61,220,151;
+    --gold:#9B7FE8; --gold-rgb:155,127,232;
+    --error:#FF4757; --error-rgb:255,71,87;
+    --line:rgba(180,160,255,0.18); --muted:#A79FC4; --line-style:solid;
+    --font-display:'Outfit'; --font-mono:'IBM Plex Mono'; --font-body:'Plus Jakarta Sans';
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -828,6 +846,79 @@
   .tour-bubble.open{ display:block; }
   .tour-bubble.centered{ top:50% !important; left:50% !important; transform:translate(-50%,-50%); }
 
+  /* Live collaborator toasts — e.g. "Alex added tortillas". Positioned just
+     below the header rather than the bottom of the screen, since Instrument's
+     mic dock already occupies the bottom edge with position:fixed. */
+  .toast-stack{
+    position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:400;
+    display:flex; flex-direction:column; gap:8px; pointer-events:none;
+    width:calc(100% - 32px); max-width:340px; align-items:center;
+  }
+  .toast{
+    background:var(--ink); color:var(--paper); font-family:var(--font-body),sans-serif; font-size:12.5px;
+    padding:10px 16px; border-radius:20px; text-align:center; box-shadow:0 10px 24px -8px rgba(0,0,0,0.4);
+    opacity:0; transform:translateY(-6px); animation:toastIn 0.22s ease forwards;
+  }
+  .toast.leaving{ animation:toastOut 0.2s ease forwards; }
+  @keyframes toastIn{ to{ opacity:1; transform:translateY(0); } }
+  @keyframes toastOut{ to{ opacity:0; transform:translateY(-6px); } }
+  @media (prefers-reduced-motion:reduce){ .toast{ animation:none; opacity:1; transform:none; } }
+
+  /* Beta interaction effects — only active when html.beta-fx is set (the
+     Settings toggle). Every resolved row is a genuinely new DOM node each
+     render (the list fully rebuilds its innerHTML on every change), so a
+     plain CSS animation on .chosen-row naturally replays each time one
+     appears — no per-element JS tracking needed for the "pop in" effect. */
+  html.beta-fx .chosen-row{ animation:chosenPopIn 0.32s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes chosenPopIn{
+    0%{ opacity:0; transform:scale(0.92) translateY(4px); }
+    100%{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  html.beta-fx .blurt-chip{ animation:blurtChipIn 0.25s ease forwards; }
+  .blurt-chip{
+    display:inline-block; background:var(--paper-dim); border:1px solid var(--line); border-radius:14px;
+    padding:4px 10px; font-size:12.5px; color:var(--text-soft); opacity:0; transform:translateY(4px) scale(0.9);
+  }
+  html.beta-fx .blurt-chip{ opacity:0; }
+  @keyframes blurtChipIn{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  .blurt-chip.resolved{ background:rgba(var(--green-rgb),0.14); border-color:var(--green); color:var(--green); font-weight:600; }
+  .live-transcript.chip-mode{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  @media (prefers-reduced-motion:reduce){
+    html.beta-fx .chosen-row{ animation:none; }
+    html.beta-fx .blurt-chip{ animation:none; opacity:1; transform:none; }
+  }
+
+  /* Signal's signature interaction — a genuinely live, audio-reactive
+     waveform replacing the mic icon while listening, driven by real
+     microphone input via the Web Audio API (not a canned CSS pulse). Hidden
+     entirely in every other theme; if mic visualization access ever fails
+     for any reason, voice capture itself is completely unaffected, since
+     SpeechRecognition manages its own separate audio stream regardless. */
+  .signal-waveform{ display:none; }
+  html[data-theme="signal"] .mic-btn.listening .signal-waveform{
+    display:flex; align-items:center; justify-content:center; gap:3px;
+    position:absolute; inset:0;
+  }
+  html[data-theme="signal"] .mic-btn.listening > svg{ opacity:0; }
+  .signal-wave-bar{
+    width:3px; height:8%; min-height:4px; background:var(--on-accent); border-radius:2px;
+    transition:height 0.05s ease;
+  }
+
+  html[data-theme="signal"] body{
+    background-image:
+      radial-gradient(circle at 15% 15%, rgba(var(--pink-rgb),0.16), transparent 45%),
+      radial-gradient(circle at 85% 20%, rgba(var(--gold-rgb),0.14), transparent 50%),
+      radial-gradient(circle at 50% 100%, rgba(var(--green-rgb),0.08), transparent 55%);
+    background-size:200% 200%;
+    animation:signalMeshDrift 26s ease-in-out infinite;
+  }
+  @keyframes signalMeshDrift{
+    0%,100%{ background-position:0% 0%, 100% 0%, 50% 100%; }
+    50%{ background-position:20% 30%, 80% 20%, 40% 80%; }
+  }
+  @media (prefers-reduced-motion:reduce){ html[data-theme="signal"] body{ animation:none; } }
+
   /* First-run tutorial */
   .tutorial-skip{
     position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted);
@@ -1194,9 +1285,11 @@
     <button data-preview-theme="aperture" style="font-family:'Space Grotesk',sans-serif; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#141A2E; color:#5EEAD4;">Aperture</button>
     <button data-preview-theme="reserve" style="font-family:'Fraunces',serif; font-style:italic; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#FFFFFF; color:#A8823E;">Reserve</button>
     <button data-preview-theme="instrument" style="font-family:'Chakra Petch',sans-serif; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:#0D1517; color:#2DE1E7; text-transform:uppercase; letter-spacing:0.04em;">Instrument</button>
+    <button data-preview-theme="signal" style="font-family:'Outfit',sans-serif; font-weight:700; font-size:11px; padding:6px 12px; border-radius:999px; border:none; cursor:pointer; background:linear-gradient(135deg,#FF6B5B,#9B7FE8); color:#150F24;">Signal ✨</button>
   </div>
 </div>
 <div class="app">
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-box" id="modalBox">
       <button class="modal-close" id="modalCloseBtn" aria-label="Close">×</button>
@@ -1309,6 +1402,15 @@
         </div>
 
         <div class="backup-section">
+          <div class="backup-label">✨ Beta interactions</div>
+          <p>Try some newer, more experimental animations — a live "words become a list" effect while you talk, and an animated reveal for "pick cheapest for all." Off by default since these are still settling in; nothing else changes if you leave this off.</p>
+          <label class="remember-zip-label" style="display:flex;">
+            <input type="checkbox" id="betaInteractionsToggle">
+            Enable beta interactions
+          </label>
+        </div>
+
+        <div class="backup-section">
           <div class="backup-label">Backup</div>
           <p>Everything lives on this device only. Export a backup file to keep somewhere safe or move to another device — import it there to restore.</p>
           <div class="settings-row">
@@ -1391,6 +1493,11 @@
           <span class="ring"></span>
           <span class="ring r2"></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          <div class="signal-waveform" id="signalWaveform" aria-hidden="true">
+            <span class="signal-wave-bar"></span><span class="signal-wave-bar"></span><span class="signal-wave-bar"></span>
+            <span class="signal-wave-bar"></span><span class="signal-wave-bar"></span><span class="signal-wave-bar"></span>
+            <span class="signal-wave-bar"></span>
+          </div>
         </button>
         <button class="mic-companion-btn" id="readAloudBtn" aria-label="Read list aloud" title="Read list aloud">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
@@ -1689,7 +1796,9 @@
       });
     },
     updateSharedListItems: function(code, items){
-      return updateDoc(doc(db, 'sharedLists', code), { items: items, updatedAt: Date.now() });
+      var user = auth.currentUser;
+      var lastEditedBy = user ? { uid: user.uid, name: user.displayName || (user.email ? user.email.split('@')[0] : 'Someone') } : null;
+      return updateDoc(doc(db, 'sharedLists', code), { items: items, updatedAt: Date.now(), lastEditedBy: lastEditedBy });
     },
     leaveSharedList: function(code, uid){
       return updateDoc(doc(db, 'sharedLists', code), { memberUids: arrayRemove(uid) });
@@ -2787,12 +2896,63 @@
   }
   document.getElementById('resetListBtn').addEventListener('click', resetList);
 
+  // ---------- Beta interactions toggle ----------
+  // Off by default — these change the feel of core moments (voice capture,
+  // pick-cheapest) enough that they deserve to be opt-in until they've had
+  // real testing, rather than silently changing behavior for everyone.
+  var BETA_INTERACTIONS_KEY = 'blurt:betaInteractions';
+  var betaInteractionsEnabled = false;
+  try{ betaInteractionsEnabled = localStorage.getItem(BETA_INTERACTIONS_KEY) === '1'; }catch(e){}
+  var betaToggle = document.getElementById('betaInteractionsToggle');
+  betaToggle.checked = betaInteractionsEnabled;
+  document.documentElement.classList.toggle('beta-fx', betaInteractionsEnabled);
+  betaToggle.addEventListener('change', function(){
+    betaInteractionsEnabled = betaToggle.checked;
+    document.documentElement.classList.toggle('beta-fx', betaInteractionsEnabled);
+    try{ localStorage.setItem(BETA_INTERACTIONS_KEY, betaInteractionsEnabled ? '1' : '0'); }catch(e){}
+    logEvent(betaInteractionsEnabled ? 'beta_interactions_enabled' : 'beta_interactions_disabled');
+  });
+
   function pickCheapestForAll(){
     var targets = items.filter(function(i){ return i.status === 'choosing' && i.results && i.results.length; });
+    if(targets.length === 0) return;
+
+    if(!betaInteractionsEnabled){
+      targets.forEach(function(it){
+        var opts = sortedOptions(it);
+        if(opts.length){ selectOption(it.id, opts[0].productId); }
+      });
+      return;
+    }
+
+    // Beta: a staggered, one-at-a-time reveal — each item resolves roughly
+    // a fifth of a second apart (the .chosen-row pop-in animation handles
+    // the actual visual "tick" per item, since it's a fresh DOM node each
+    // render), ending in a short savings summary toast.
+    var previewSavings = 0;
     targets.forEach(function(it){
       var opts = sortedOptions(it);
-      if(opts.length){ selectOption(it.id, opts[0].productId); }
+      if(opts.length === 0) return;
+      var cheapest = opts[0];
+      var cheapestPrice = cheapest.promoPrice || cheapest.regularPrice;
+      var pricesShown = it.results.map(function(p){ return p.promoPrice || p.regularPrice; });
+      var priciestShown = Math.max.apply(null, pricesShown);
+      var saved = (priciestShown - cheapestPrice) * (it.qty || 1);
+      if(saved > PRICE_EPSILON) previewSavings += saved;
     });
+
+    targets.forEach(function(it, idx){
+      setTimeout(function(){
+        var opts = sortedOptions(it);
+        if(opts.length){ selectOption(it.id, opts[0].productId); }
+      }, idx * 220);
+    });
+
+    setTimeout(function(){
+      showToast(previewSavings > PRICE_EPSILON
+        ? 'Done — you saved ' + fmt(previewSavings) + ' compared with the priciest options'
+        : 'Done — everything\u2019s picked');
+    }, targets.length * 220 + 250);
   }
   document.getElementById('pickCheapestAll').addEventListener('click', pickCheapestForAll);
   document.getElementById('readAloudBtn').addEventListener('click', speakSummary);
@@ -3341,6 +3501,19 @@
       setTimeout(function(){ attachSharedListWhenReady(code); }, 50);
     }
   }
+  function showToast(text){
+    var stack = document.getElementById('toastStack');
+    if(!stack) return;
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = text;
+    stack.appendChild(el);
+    setTimeout(function(){
+      el.classList.add('leaving');
+      setTimeout(function(){ el.remove(); }, 220);
+    }, 3200);
+  }
+
   function attachSharedListListener(code){
     detachSharedListListener();
     if(!window.BlurtCloud) return;
@@ -3357,7 +3530,27 @@
         switchToList(savedLists[0].id);
         return;
       }
-      items = (data.items || []).slice();
+
+      // A quick, honest diff for the "Alex added tortillas" moment — only
+      // announces changes made by someone else, never your own edits
+      // echoing back to you through the same live listener.
+      var incomingItems = data.items || [];
+      var madeByOther = data.lastEditedBy && communityUid && data.lastEditedBy.uid !== communityUid && data.lastEditedBy.uid !== (currentUser && currentUser.uid);
+      if(madeByOther && items){
+        var oldIds = {};
+        items.forEach(function(i){ oldIds[i.id] = true; });
+        var newlyAdded = incomingItems.filter(function(i){ return !oldIds[i.id]; }).map(function(i){ return i.query; });
+        var who = data.lastEditedBy.name || 'Someone';
+        if(newlyAdded.length === 1){
+          showToast(who + ' added ' + newlyAdded[0]);
+        } else if(newlyAdded.length > 1){
+          showToast(who + ' added ' + newlyAdded.length + ' items');
+        } else if(incomingItems.length < items.length){
+          showToast(who + ' updated the list');
+        }
+      }
+
+      items = incomingItems.slice();
       var entry = savedLists.find(function(l){ return l.id === code; });
       if(entry){ entry.items = items; entry.name = data.name; entry.memberUids = data.memberUids; }
       try{ localStorage.setItem(LIST_KEY, JSON.stringify(items)); }catch(e){}
@@ -4561,17 +4754,101 @@
 
   var IDLE_MIC_HINT = '<strong>Tap and say</strong> what you are shopping for, or <strong>press and hold</strong> to type instead.';
 
+  function clearLiveTranscript(){
+    liveTranscript.textContent = '';
+    liveTranscript.classList.remove('chip-mode');
+  }
+
+  // Beta: "The Blurt Moment" — words separate visually into distinct items
+  // as you speak, rather than sitting as one plain transcript line. Reuses
+  // the exact same splitting logic that actually adds the items a moment
+  // later, so what you see forming is genuinely what's about to happen, not
+  // a guess. On the final result, each chip gets a checkmark before the
+  // transcript clears and the real items appear in the list below.
+  function renderBlurtMomentChips(text, isFinal){
+    liveTranscript.classList.add('chip-mode');
+    var segments = parseMultipleItems(text);
+    if(segments.length === 0){
+      liveTranscript.innerHTML = text ? '<span class="blurt-chip">' + escapeHtml(text) + '</span>' : '';
+      return;
+    }
+    liveTranscript.innerHTML = segments.map(function(seg, i){
+      return '<span class="blurt-chip' + (isFinal ? ' resolved' : '') + '" style="animation-delay:' + (i * 45) + 'ms;">' +
+        escapeHtml(seg) + (isFinal ? ' ✓' : '') +
+      '</span>';
+    }).join('');
+  }
+
   function scheduleMicUiReset(){
     clearTimeout(micResetTimer);
     micResetTimer = setTimeout(function(){
       micHint.innerHTML = IDLE_MIC_HINT;
-      liveTranscript.textContent = '';
+      clearLiveTranscript();
       if(listening){
         try{ recognition.stop(); }catch(e){}
         listening = false;
         micBtn.classList.remove('listening');
       }
     }, 15000);
+  }
+
+  // ---------- Signal theme: live audio-reactive waveform ----------
+  // A separate getUserMedia stream purely for visualization — SpeechRecognition
+  // manages its own internal audio access for actual transcription, so this
+  // is additive, not a replacement. If it fails for any reason (permission,
+  // unsupported browser), voice capture itself is completely unaffected.
+  var signalAudioCtx = null;
+  var signalAnalyser = null;
+  var signalMicStream = null;
+  var signalWaveformRAF = null;
+
+  function startSignalWaveform(){
+    if(document.documentElement.getAttribute('data-theme') !== 'signal') return;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
+      signalMicStream = stream;
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return;
+      signalAudioCtx = new AudioCtx();
+      var source = signalAudioCtx.createMediaStreamSource(stream);
+      signalAnalyser = signalAudioCtx.createAnalyser();
+      signalAnalyser.fftSize = 64;
+      source.connect(signalAnalyser);
+      renderSignalWaveform();
+    }).catch(function(){ /* visualization is optional — nothing else depends on it */ });
+  }
+
+  function renderSignalWaveform(){
+    if(!signalAnalyser) return;
+    var bufferLength = signalAnalyser.frequencyBinCount;
+    var dataArray = new Uint8Array(bufferLength);
+    var bars = document.querySelectorAll('#signalWaveform .signal-wave-bar');
+    if(bars.length === 0) return;
+    var step = Math.max(1, Math.floor(bufferLength / bars.length));
+    function draw(){
+      if(!signalAnalyser) return;
+      signalAnalyser.getByteFrequencyData(dataArray);
+      bars.forEach(function(bar, i){
+        var v = dataArray[i * step] || 0;
+        bar.style.height = Math.max(8, (v / 255) * 100) + '%';
+      });
+      signalWaveformRAF = requestAnimationFrame(draw);
+    }
+    draw();
+  }
+
+  function stopSignalWaveform(){
+    if(signalWaveformRAF){ cancelAnimationFrame(signalWaveformRAF); signalWaveformRAF = null; }
+    if(signalMicStream){
+      signalMicStream.getTracks().forEach(function(t){ t.stop(); });
+      signalMicStream = null;
+    }
+    if(signalAudioCtx){
+      try{ signalAudioCtx.close(); }catch(e){}
+      signalAudioCtx = null;
+    }
+    signalAnalyser = null;
+    document.querySelectorAll('#signalWaveform .signal-wave-bar').forEach(function(bar){ bar.style.height = '8%'; });
   }
 
   if(SpeechRecognition){
@@ -4585,7 +4862,8 @@
         listening = true;
         micBtn.classList.add('listening');
         micHint.innerHTML = '<strong>Listening…</strong> say what you are shopping for.';
-        liveTranscript.textContent = '';
+        clearLiveTranscript();
+        startSignalWaveform();
         scheduleMicUiReset();
       };
       recognition.onresult = function(e){
@@ -4594,13 +4872,20 @@
           var t = e.results[i][0].transcript;
           if(e.results[i].isFinal) final += t; else interim += t;
         }
-        liveTranscript.textContent = final || interim;
+        var text = final || interim;
+        if(betaInteractionsEnabled){
+          renderBlurtMomentChips(text, !!final);
+        } else {
+          liveTranscript.classList.remove('chip-mode');
+          liveTranscript.textContent = text;
+        }
         if(final){ if(!tryRunCommand(final)) addItems(final); }
         scheduleMicUiReset();
       };
       recognition.onerror = function(e){
         listening = false;
         micBtn.classList.remove('listening');
+        stopSignalWaveform();
         if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
           micHint.innerHTML = '<strong>Mic access blocked.</strong> Press and hold the mic to type instead.';
           manualRow.classList.add('open');
@@ -4614,6 +4899,7 @@
       recognition.onend = function(){
         listening = false;
         micBtn.classList.remove('listening');
+        stopSignalWaveform();
         if(!liveTranscript.textContent){
           micHint.innerHTML = IDLE_MIC_HINT;
         }
@@ -4806,7 +5092,7 @@
   logEvent('app_opened');
 
   // ---------- PREVIEW-ONLY theme switcher (remove with the switcher markup above) ----------
-  var THEME_COLORS = { ledger: '#B23A2E', aperture: '#0F9488', reserve: '#A8823E', instrument: '#0A5F64' };
+  var THEME_COLORS = { ledger: '#B23A2E', aperture: '#0F9488', reserve: '#A8823E', instrument: '#0A5F64', signal: '#FF6B5B' };
   var THEME_PREVIEW_KEY = 'blurt:previewTheme';
   function setPreviewTheme(name){
     document.documentElement.setAttribute('data-theme', name);
