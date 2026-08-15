@@ -545,6 +545,24 @@
   }
   .settings-close-btn:hover{ color:var(--pink-deep); background:var(--paper); }
   .settings-close-btn svg{ width:16px; height:16px; }
+
+  .your-data-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; margin-bottom:14px;
+  }
+  .your-data-list{
+    list-style:none; margin:8px 0 10px; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:6px 10px;
+  }
+  .your-data-list li{
+    font-size:12px; color:var(--text-soft); display:flex; align-items:center; gap:6px;
+  }
+  .your-data-list li::before{
+    content:""; width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0;
+  }
+  .your-data-link{
+    font-size:11px; color:var(--pink-deep); text-decoration:none; font-weight:600;
+  }
+  .your-data-link:hover{ text-decoration:underline; }
   .settings-panel.open{ display:block; }
   .settings-panel p{ margin:0 0 10px; font-size:12px; line-height:1.55; color:var(--text-soft); }
   .settings-field{ margin-bottom:10px; }
@@ -643,6 +661,10 @@
   }
   .loc-go-btn{ background:var(--ink); color:var(--on-accent); }
   .loc-geo-btn{ background:var(--paper); border:1px solid var(--line) !important; color:var(--text-soft); }
+  .location-trust-note{
+    display:none; margin:8px 0 0; font-size:10.5px; color:var(--muted); line-height:1.5;
+  }
+  .location-edit.open ~ .location-trust-note{ display:block; }
   .remember-zip-label{
     display:none; align-items:center; gap:6px; margin-top:8px; font-size:11px; color:var(--muted); cursor:pointer;
   }
@@ -800,6 +822,20 @@
   .budget-edit{ background:none; border:none; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer; padding:0; }
   .budget-edit:hover{ color:var(--pink-deep); }
   .budget-edit-row{ display:none; margin:8px 26px 0; gap:8px; }
+  .budget-nudge{
+    display:none; align-items:center; gap:8px; margin:8px 26px 0; padding:9px 12px;
+    background:var(--paper-dim); border:1px dashed var(--line); border-radius:10px;
+  }
+  .budget-nudge span{ flex:1; font-size:11.5px; color:var(--text-soft); line-height:1.4; }
+  .budget-nudge button{ font-family:var(--font-body),sans-serif; cursor:pointer; }
+  #budgetNudgeSetBtn{
+    background:var(--pink); color:var(--on-accent); border:none; border-radius:14px;
+    padding:6px 12px; font-size:11px; font-weight:700; white-space:nowrap;
+  }
+  #budgetNudgeDismissBtn{
+    background:none; border:none; color:var(--muted); font-size:16px; padding:2px 4px; line-height:1;
+  }
+  #budgetNudgeDismissBtn:hover{ color:var(--pink-deep); }
   .budget-edit-row.open{ display:flex; }
   .budget-edit-row input{
     flex:1; padding:7px 10px; border-radius:7px; border:1px solid var(--line);
@@ -1509,6 +1545,18 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
+
+        <div class="your-data-card">
+          <div class="backup-label">Your data</div>
+          <ul class="your-data-list">
+            <li>Local by default</li>
+            <li>No ads</li>
+            <li>No third-party analytics</li>
+            <li>No data selling</li>
+          </ul>
+          <a href="/privacy.html" class="your-data-link">Full privacy &amp; terms →</a>
+        </div>
+
         <p>This is the address of your Blurt backend — the small service that talks to Kroger on the app's behalf. Your location (used for finding nearby stores) is set from the main screen, not here.</p>
         <div class="settings-field">
           <label for="backendUrl">Backend URL</label>
@@ -1611,6 +1659,7 @@
         <button class="loc-go-btn" id="zipMainGo">Go</button>
         <button class="loc-geo-btn" id="useLocationBtn">Use my location</button>
       </div>
+      <p class="location-trust-note">Used to find nearby Kroger-family stores. Your precise location isn't stored.</p>
       <label class="remember-zip-label">
         <input type="checkbox" id="rememberZipCheckbox" checked>
         Remember this ZIP on this device
@@ -1685,6 +1734,11 @@
       <span class="budget-text" id="budgetText">no budget set</span>
       <button class="budget-edit" id="budgetEditBtn">set budget</button>
     </div>
+    <div class="budget-nudge" id="budgetNudge" style="display:none;">
+      <span>Shopping with a budget? We'll keep an eye on it for you.</span>
+      <button id="budgetNudgeSetBtn">Set one</button>
+      <button id="budgetNudgeDismissBtn" aria-label="Dismiss">×</button>
+    </div>
     <div class="budget-edit-row" id="budgetEditRow">
       <input type="number" id="budgetInput" placeholder="$ amount" min="0" step="1" aria-label="Budget amount in dollars">
       <button id="budgetSaveBtn">Save</button>
@@ -1755,7 +1809,7 @@
       </button>
     </div>
     <div class="footer-tagline">tap the mic before it slips your mind</div>
-    <span id="versionTag">v3.1.0</span>
+    <span id="versionTag">v3.2.0</span>
   </footer>
 </div>
 
@@ -3095,11 +3149,21 @@
 
   // ---------- Budget cap ----------
   var budgetEditRow = document.getElementById('budgetEditRow');
+  var BUDGET_NUDGE_SEEN_KEY = 'blurt:budgetNudgeSeen';
   document.getElementById('budgetEditBtn').addEventListener('click', function(){
     var input = document.getElementById('budgetInput');
     input.value = (settings.budget !== null && settings.budget !== undefined) ? settings.budget : '';
     budgetEditRow.classList.toggle('open');
     if(budgetEditRow.classList.contains('open')) input.focus();
+  });
+  document.getElementById('budgetNudgeSetBtn').addEventListener('click', function(){
+    try{ localStorage.setItem(BUDGET_NUDGE_SEEN_KEY, '1'); }catch(e){}
+    document.getElementById('budgetNudge').style.display = 'none';
+    document.getElementById('budgetEditBtn').click();
+  });
+  document.getElementById('budgetNudgeDismissBtn').addEventListener('click', function(){
+    try{ localStorage.setItem(BUDGET_NUDGE_SEEN_KEY, '1'); }catch(e){}
+    document.getElementById('budgetNudge').style.display = 'none';
   });
   document.getElementById('budgetSaveBtn').addEventListener('click', function(){
     var val = parseFloat(document.getElementById('budgetInput').value);
@@ -3987,6 +4051,18 @@
       budgetText.className = 'budget-text';
       budgetText.textContent = 'no budget set';
       if(budgetGauge){ budgetGauge.style.setProperty('--pct', 0); }
+    }
+
+    // A one-time, unobtrusive nudge — not a modal, not repeated — the
+    // moment your list has genuinely become useful (2+ real items) and you
+    // haven't set a budget yet. Never shown again once set, dismissed, or
+    // seen without action.
+    var budgetNudge = document.getElementById('budgetNudge');
+    if(budgetNudge){
+      var alreadyHandled = false;
+      try{ alreadyHandled = localStorage.getItem(BUDGET_NUDGE_SEEN_KEY) === '1'; }catch(e){}
+      var shouldShow = !alreadyHandled && (settings.budget === null || settings.budget === undefined) && resolvedItems.length >= 2;
+      budgetNudge.style.display = shouldShow ? 'flex' : 'none';
     }
 
     var timeRow = document.getElementById('timeEstimateRow');
